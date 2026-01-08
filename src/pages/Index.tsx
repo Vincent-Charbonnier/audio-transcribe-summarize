@@ -58,9 +58,22 @@ const Index = () => {
     });
   }, [toast]);
 
-  const handleAudioReady = useCallback(async (file: File) => {
+  const handleFileSelect = useCallback((file: File) => {
     setAudioFile(file);
-    
+    setTranscript("");
+    setSummary("");
+  }, []);
+
+  const handleTranscribe = useCallback(async () => {
+    if (!audioFile) {
+      toast({
+        title: "No file selected",
+        description: "Please record or upload an audio/video file first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!settings.whisperUrl) {
       toast({
         title: "Configuration required",
@@ -71,12 +84,10 @@ const Index = () => {
     }
 
     setIsTranscribing(true);
-    setTranscript("");
-    setSummary("");
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", audioFile);
       if (settings.whisperModel) {
         formData.append("model", settings.whisperModel);
       }
@@ -124,7 +135,7 @@ const Index = () => {
     } finally {
       setIsTranscribing(false);
     }
-  }, [settings, toast]);
+  }, [audioFile, settings, toast]);
 
   const handleGenerateSummary = useCallback(async () => {
     if (!transcript) return;
@@ -228,7 +239,7 @@ Preserve speaker context when extracting decisions and action items.`;
               className="bg-card rounded-2xl border border-border shadow-card p-6"
             >
               <h2 className="text-lg font-semibold text-foreground mb-6">Record or Upload</h2>
-              <AudioRecorder onAudioReady={handleAudioReady} isProcessing={isTranscribing} />
+              <AudioRecorder onFileSelect={handleFileSelect} onTranscribe={handleTranscribe} hasFile={!!audioFile} isProcessing={isTranscribing} />
             </motion.div>
 
             {/* Transcript Editor */}
