@@ -162,7 +162,9 @@ def transcribe_chunk(chunk_path: str, url: str, token: str, model: str):
     
     with open(chunk_path, "rb") as f:
         files = {"file": (os.path.basename(chunk_path), f, "audio/wav")}
-        data = {}
+        data = {
+            "task": "transcribe"  # Keep original language, don't translate to English
+        }
         if model:
             data["model"] = model
         
