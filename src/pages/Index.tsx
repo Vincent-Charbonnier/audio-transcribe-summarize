@@ -48,7 +48,7 @@ const Index = () => {
     setSummary("");
   }, []);
 
-  const handleTranscribe = useCallback(async () => {
+  const handleTranscribe = useCallback(async (language: string) => {
     if (!audioFile) {
       toast({
         title: "No file selected",
@@ -70,7 +70,7 @@ const Index = () => {
     setIsTranscribing(true);
 
     try {
-      const result = await api.transcribe(audioFile);
+      const result = await api.transcribe(audioFile, language || undefined);
       setTranscript(result.transcript);
 
       toast({
