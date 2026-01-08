@@ -1,0 +1,21 @@
+replicaCount: 1
+
+frontend:
+  image: vinchar/transcriber-frontend
+  tag: "0.0.2"
+  port: 80
+
+backend:
+  image: vinchar/transcriber-backend
+  tag: "0.0.2"
+  port: 8000
+
+service:
+  type: ClusterIP
+
+env:
+  VITE_API_URL: "http://scribe-backend:8000"
+
+resources:
+  limits: {}
+  requests: {}
