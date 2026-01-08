@@ -1,6 +1,6 @@
-# Voice2Text – Transcribe & Summarize Meetings
+# Scribe – Transcribe & Summarize Meetings
 
-Voice2Text is a lightweight web UI that uses AI to transcribe audio/video files and generate meeting summaries.  
+Scribe is a lightweight web UI that uses AI to transcribe audio/video files and generate meeting summaries.  
 It is designed for seamless deployment inside HPE Private Cloud AI environments using Helm charts, but can also be run in a standard Docker environment.
 
 ---
@@ -34,7 +34,7 @@ The repository includes all files required to deploy the application into an HPE
 1. Navigate to the AI Essentials interface.
 2. Select "Import New Framework".
 3. Upload the Helm chart file:
-```voice2text.x.x.x.tgz```
+```scribe.x.x.x.tgz```
 4. Deploy the framework.
 5. After deployment, open the application UI and configure:
 - Whisper API endpoint
@@ -58,10 +58,8 @@ Although Helm deployment is the primary use case, the application can also be ru
 ### Basic run
 
 ```
-docker run -d
---name voice2text
--p 7860:7860
-vinchar/voice2text:latest
+docker run -d --name scribe-frontend -p 3000:80 --restart unless-stopped vinchar/transcriber-frontend:0.0.2
+docker run -d --name scribe-backend -p 8000:8000 -v ${PWD}/data:/app/data -e MODEL_CONFIG_PATH=/app/data/model_settings.json --restart unless-stopped vinchar/transcriber-backend:0.0.2
 ```
 
 ---
@@ -94,9 +92,7 @@ The "Clear All Model Settings" button performs the following:
 
 ## UI Overview
 
-A screenshot should be placed here once available:
-
-![Voice2Text UI](UI.png)
+![Scribe UI](UI.png)
 
 ---
 
@@ -110,7 +106,7 @@ A screenshot should be placed here once available:
 | icon.png                 | Icon used in AI Essentials when deploying via Helm                          |
 | logo.png                 | Logo embedded into the Gradio UI                                            |
 | helmchart/               | Unpacked Helm chart                                                         |
-| voice2text.x.x.x.tgz     | Packaged Helm chart used for deployment in HPE Private Cloud AI             |
+| scribe.x.x.x.tgz         | Packaged Helm chart used for deployment in HPE Private Cloud AI             |
 
 ---
 
