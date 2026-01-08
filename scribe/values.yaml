@@ -1,27 +1,43 @@
 replicaCount: 1
 
 frontend:
-  image: vinchar/transcriber-frontend
+  repository: vinchar/transcriber-frontend
   tag: "0.0.2"
+  pullPolicy: IfNotPresent
   port: 80
 
 backend:
-  image: vinchar/transcriber-backend
+  repository: vinchar/transcriber-backend
   tag: "0.0.2"
+  pullPolicy: IfNotPresent
   port: 8000
 
 service:
   type: ClusterIP
+  port: 80
 
 env:
   VITE_API_URL: "http://scribe-backend:8000"
 
-ezua:
-  enabled: true
-  virtualService:
-    host: "scribe.${DOMAIN_NAME}"
-    istioGateway: "istio-system/ezaf-gateway"
+readinessProbe:
+  path: "/"
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
 
-resources:
-  limits: {}
-  requests: {}
+livenessProbe:
+  path: "/"
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+# Istio VirtualService settings for PCAI
+ezua:
+  virtualService:
+    endpoint: "scribe.${DOMAIN_NAME}"
+    domain: "${DOMAIN_NAME}"
+    istioGateway: "istio-system/ezaf-gateway"

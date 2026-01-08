@@ -2,11 +2,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: scribe-backend
+  labels:
+    {{- include "scribe.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.service.type }}
+  type: ClusterIP
   selector:
     app: scribe-backend
   ports:
-    - protocol: TCP
-      port: {{ .Values.backend.port }}
+    - port: {{ .Values.backend.port }}
       targetPort: {{ .Values.backend.port }}
+      protocol: TCP

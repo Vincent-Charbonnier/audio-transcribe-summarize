@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: {{ include "scribe.fullname" . }}-backend
   labels:
-    app: scribe-backend
+    {{- include "scribe.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -16,6 +16,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: "{{ .Values.backend.image }}:{{ .Values.backend.tag }}"
+          image: "{{ .Values.backend.repository }}:{{ .Values.backend.tag }}"
+          imagePullPolicy: {{ .Values.backend.pullPolicy }}
           ports:
             - containerPort: {{ .Values.backend.port }}

@@ -1,6 +1,6 @@
 apiVersion: v2
 name: scribe
-description: Helm chart for Scribe (frontend + backend)
+description: Helm chart for vinchar/Scribe (frontend + backend)
 type: application
-version: 0.0.2
-appVersion: "0.0.2"
+version: 0.0.8
+appVersion: "0.0.8"
