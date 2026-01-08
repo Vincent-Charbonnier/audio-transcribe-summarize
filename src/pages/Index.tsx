@@ -1,43 +1,19 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { AudioWaveform } from "lucide-react";
+import { AudioWaveform, WifiOff, Wifi } from "lucide-react";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { TranscriptEditor } from "@/components/TranscriptEditor";
 import { SummaryPanel } from "@/components/SummaryPanel";
-import { SettingsDialog, ModelSettings } from "@/components/SettingsDialog";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { useToast } from "@/hooks/use-toast";
-
-const STORAGE_KEY = "scribe-model-settings";
+import { api } from "@/lib/api";
+import { config } from "@/config";
 
 const Index = () => {
   const { toast } = useToast();
   
-  // Model settings
-  const [settings, setSettings] = useState<ModelSettings>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return {
-          whisperUrl: "",
-          whisperToken: "",
-          whisperModel: "whisper-large-v3",
-          summarizerUrl: "",
-          summarizerToken: "",
-          summarizerModel: "",
-        };
-      }
-    }
-    return {
-      whisperUrl: "",
-      whisperToken: "",
-      whisperModel: "whisper-large-v3",
-      summarizerUrl: "",
-      summarizerToken: "",
-      summarizerModel: "",
-    };
-  });
+  // Connection state
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
 
   // App state
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -49,14 +25,22 @@ const Index = () => {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
 
-  const handleSaveSettings = useCallback((newSettings: ModelSettings) => {
-    setSettings(newSettings);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings));
-    toast({
-      title: "Settings saved",
-      description: "Your model configuration has been updated.",
-    });
-  }, [toast]);
+  // Check backend connection on mount
+  useEffect(() => {
+    checkConnection();
+  }, []);
+
+  const checkConnection = async () => {
+    const connected = await api.healthCheck();
+    setIsConnected(connected);
+    if (!connected) {
+      toast({
+        title: "Backend not available",
+        description: `Cannot connect to ${config.apiUrl}. Make sure the backend is running.`,
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleFileSelect = useCallback((file: File) => {
     setAudioFile(file);
@@ -74,13 +58,10 @@ const Index = () => {
       return;
     }
 
-    // Debug: log current settings
-    console.log("Current settings:", settings);
-
-    if (!settings.whisperUrl) {
+    if (!isConnected) {
       toast({
-        title: "Configuration required",
-        description: "Please configure your transcription API endpoint in settings (click the gear icon).",
+        title: "Backend not connected",
+        description: "Please make sure the backend server is running.",
         variant: "destructive",
       });
       return;
@@ -89,44 +70,12 @@ const Index = () => {
     setIsTranscribing(true);
 
     try {
-      const formData = new FormData();
-      formData.append("file", audioFile);
-      if (settings.whisperModel) {
-        formData.append("model", settings.whisperModel);
-      }
-
-      const headers: Record<string, string> = {};
-      if (settings.whisperToken) {
-        headers["Authorization"] = `Bearer ${settings.whisperToken}`;
-      }
-
-      const response = await fetch(settings.whisperUrl, {
-        method: "POST",
-        headers,
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Transcription failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const text = data.transcription || data.text || data.result || "";
-      
-      if (data.segments) {
-        // Handle diarization format
-        const lines = data.segments.map((seg: any) => {
-          const speaker = seg.speaker || "Speaker";
-          return `[${speaker}] ${seg.text || ""}`;
-        });
-        setTranscript(lines.join("\n"));
-      } else {
-        setTranscript(text);
-      }
+      const result = await api.transcribe(audioFile);
+      setTranscript(result.transcript);
 
       toast({
         title: "Transcription complete",
-        description: "Your audio has been transcribed successfully.",
+        description: `Transcribed ${result.duration.toFixed(1)}s of audio.`,
       });
     } catch (error) {
       console.error("Transcription error:", error);
@@ -138,65 +87,33 @@ const Index = () => {
     } finally {
       setIsTranscribing(false);
     }
-  }, [audioFile, settings, toast]);
+  }, [audioFile, isConnected, toast]);
 
   const handleGenerateSummary = useCallback(async () => {
-    if (!transcript) return;
-
-    if (!settings.summarizerUrl) {
+    if (!transcript) {
       toast({
-        title: "Configuration required",
-        description: "Please configure your summarizer API endpoint in settings.",
+        title: "No transcript",
+        description: "Please transcribe audio first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isConnected) {
+      toast({
+        title: "Backend not connected",
+        description: "Please make sure the backend server is running.",
         variant: "destructive",
       });
       return;
     }
 
     setIsSummarizing(true);
-    setSummary("");
-
-    const systemPrompt = `You are a helpful assistant that summarizes meeting transcripts. 
-The transcript may include speaker labels such as [Speaker 1], [Speaker 2], etc. 
-Preserve speaker context when extracting decisions and action items.`;
-
-    const userPrompt = `${prompt || ""}\n\nTranscript:\n${transcript}\n\nPlease produce a ${style} summary, ${length} length.`;
 
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (settings.summarizerToken) {
-        headers["Authorization"] = `Bearer ${settings.summarizerToken}`;
-      }
+      const result = await api.summarize(transcript, prompt, style, length);
+      setSummary(result.summary);
 
-      const response = await fetch(settings.summarizerUrl, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: settings.summarizerModel || undefined,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Summarization failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      let summaryText = "";
-      
-      if (data.choices?.[0]?.message?.content) {
-        summaryText = data.choices[0].message.content;
-      } else if (data.choices?.[0]?.text) {
-        summaryText = data.choices[0].text;
-      } else {
-        summaryText = data.summary || data.result || data.text || "";
-      }
-
-      setSummary(summaryText);
       toast({
         title: "Summary generated",
         description: "Your transcript has been summarized successfully.",
@@ -211,7 +128,7 @@ Preserve speaker context when extracting decisions and action items.`;
     } finally {
       setIsSummarizing(false);
     }
-  }, [transcript, prompt, style, length, settings, toast]);
+  }, [transcript, prompt, style, length, isConnected, toast]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -227,7 +144,25 @@ Preserve speaker context when extracting decisions and action items.`;
               <p className="text-xs text-muted-foreground">Transcribe & Summarize</p>
             </div>
           </div>
-          <SettingsDialog settings={settings} onSave={handleSaveSettings} />
+          <div className="flex items-center gap-3">
+            {/* Connection status indicator */}
+            <div className="flex items-center gap-2 text-sm">
+              {isConnected === null ? (
+                <span className="text-muted-foreground">Checking...</span>
+              ) : isConnected ? (
+                <span className="flex items-center gap-1.5 text-primary">
+                  <Wifi className="w-4 h-4" />
+                  Connected
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-destructive">
+                  <WifiOff className="w-4 h-4" />
+                  Offline
+                </span>
+              )}
+            </div>
+            <SettingsDialog onSettingsChange={checkConnection} />
+          </div>
         </div>
       </header>
 
@@ -242,7 +177,12 @@ Preserve speaker context when extracting decisions and action items.`;
               className="bg-card rounded-2xl border border-border shadow-card p-6"
             >
               <h2 className="text-lg font-semibold text-foreground mb-6">Record or Upload</h2>
-              <AudioRecorder onFileSelect={handleFileSelect} onTranscribe={handleTranscribe} hasFile={!!audioFile} isProcessing={isTranscribing} />
+              <AudioRecorder 
+                onFileSelect={handleFileSelect} 
+                onTranscribe={handleTranscribe}
+                hasFile={!!audioFile}
+                isProcessing={isTranscribing} 
+              />
             </motion.div>
 
             {/* Transcript Editor */}
@@ -274,7 +214,8 @@ Preserve speaker context when extracting decisions and action items.`;
       {/* Footer */}
       <footer className="border-t border-border py-6 mt-12">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          Edit the transcript to fix errors before generating your summary.
+          <p>Edit the transcript to fix errors before generating your summary.</p>
+          <p className="mt-1 text-xs">Backend: {config.apiUrl}</p>
         </div>
       </footer>
     </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, Check, X, Eye, EyeOff } from "lucide-react";
+import { Settings, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,34 +12,71 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-
-export interface ModelSettings {
-  whisperUrl: string;
-  whisperToken: string;
-  whisperModel: string;
-  summarizerUrl: string;
-  summarizerToken: string;
-  summarizerModel: string;
-}
+import { api, ModelSettings } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface SettingsDialogProps {
-  settings: ModelSettings;
-  onSave: (settings: ModelSettings) => void;
+  onSettingsChange?: () => void;
 }
 
-export function SettingsDialog({ settings, onSave }: SettingsDialogProps) {
+export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [localSettings, setLocalSettings] = useState(settings);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [localSettings, setLocalSettings] = useState<ModelSettings>({
+    whisper_url: "",
+    whisper_token: "",
+    whisper_model: "whisper-large-v3",
+    summarizer_url: "",
+    summarizer_token: "",
+    summarizer_model: "",
+  });
   const [showWhisperToken, setShowWhisperToken] = useState(false);
   const [showSummarizerToken, setShowSummarizerToken] = useState(false);
 
   useEffect(() => {
-    setLocalSettings(settings);
-  }, [settings]);
+    if (open) {
+      loadSettings();
+    }
+  }, [open]);
 
-  const handleSave = () => {
-    onSave(localSettings);
-    setOpen(false);
+  const loadSettings = async () => {
+    setLoading(true);
+    try {
+      const settings = await api.getSettings();
+      setLocalSettings(settings);
+    } catch (error) {
+      console.error("Failed to load settings:", error);
+      toast({
+        title: "Connection Error",
+        description: "Could not connect to backend. Make sure the server is running.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.updateSettings(localSettings);
+      toast({
+        title: "Settings saved",
+        description: "Your model configuration has been updated.",
+      });
+      onSettingsChange?.();
+      setOpen(false);
+    } catch (error) {
+      toast({
+        title: "Save failed",
+        description: error instanceof Error ? error.message : "Could not save settings",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateField = (field: keyof ModelSettings, value: string) => {
@@ -61,97 +98,103 @@ export function SettingsDialog({ settings, onSave }: SettingsDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Transcription Settings */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-foreground">Transcription Model</h4>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">API Endpoint URL</Label>
-                <Input
-                  value={localSettings.whisperUrl}
-                  onChange={(e) => updateField("whisperUrl", e.target.value)}
-                  placeholder="https://your-whisper-endpoint/v1/audio/transcriptions"
-                  className="bg-secondary/50 border-border"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">API Token</Label>
-                <div className="relative">
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="space-y-6 py-4">
+            {/* Transcription Settings */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-foreground">Transcription Model</h4>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">API Endpoint URL</Label>
                   <Input
-                    type={showWhisperToken ? "text" : "password"}
-                    value={localSettings.whisperToken}
-                    onChange={(e) => updateField("whisperToken", e.target.value)}
-                    placeholder="Bearer token"
-                    className="bg-secondary/50 border-border pr-10"
+                    value={localSettings.whisper_url}
+                    onChange={(e) => updateField("whisper_url", e.target.value)}
+                    placeholder="https://your-whisper-endpoint/v1/audio/transcriptions"
+                    className="bg-secondary/50 border-border"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowWhisperToken(!showWhisperToken)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showWhisperToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">API Token</Label>
+                  <div className="relative">
+                    <Input
+                      type={showWhisperToken ? "text" : "password"}
+                      value={localSettings.whisper_token}
+                      onChange={(e) => updateField("whisper_token", e.target.value)}
+                      placeholder="Bearer token"
+                      className="bg-secondary/50 border-border pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowWhisperToken(!showWhisperToken)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showWhisperToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Model Name</Label>
+                  <Input
+                    value={localSettings.whisper_model}
+                    onChange={(e) => updateField("whisper_model", e.target.value)}
+                    placeholder="whisper-large-v3"
+                    className="bg-secondary/50 border-border"
+                  />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Model Name</Label>
-                <Input
-                  value={localSettings.whisperModel}
-                  onChange={(e) => updateField("whisperModel", e.target.value)}
-                  placeholder="whisper-large-v3"
-                  className="bg-secondary/50 border-border"
-                />
+            </div>
+
+            <Separator className="bg-border" />
+
+            {/* Summarizer Settings */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-foreground">Summarizer Model</h4>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">API Endpoint URL</Label>
+                  <Input
+                    value={localSettings.summarizer_url}
+                    onChange={(e) => updateField("summarizer_url", e.target.value)}
+                    placeholder="https://your-endpoint/v1/chat/completions"
+                    className="bg-secondary/50 border-border"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">API Token</Label>
+                  <div className="relative">
+                    <Input
+                      type={showSummarizerToken ? "text" : "password"}
+                      value={localSettings.summarizer_token}
+                      onChange={(e) => updateField("summarizer_token", e.target.value)}
+                      placeholder="Bearer token"
+                      className="bg-secondary/50 border-border pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSummarizerToken(!showSummarizerToken)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showSummarizerToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Model Name</Label>
+                  <Input
+                    value={localSettings.summarizer_model}
+                    onChange={(e) => updateField("summarizer_model", e.target.value)}
+                    placeholder="gpt-4"
+                    className="bg-secondary/50 border-border"
+                  />
+                </div>
               </div>
             </div>
           </div>
-
-          <Separator className="bg-border" />
-
-          {/* Summarizer Settings */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-foreground">Summarizer Model</h4>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">API Endpoint URL</Label>
-                <Input
-                  value={localSettings.summarizerUrl}
-                  onChange={(e) => updateField("summarizerUrl", e.target.value)}
-                  placeholder="https://your-endpoint/v1/chat/completions"
-                  className="bg-secondary/50 border-border"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">API Token</Label>
-                <div className="relative">
-                  <Input
-                    type={showSummarizerToken ? "text" : "password"}
-                    value={localSettings.summarizerToken}
-                    onChange={(e) => updateField("summarizerToken", e.target.value)}
-                    placeholder="Bearer token"
-                    className="bg-secondary/50 border-border pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSummarizerToken(!showSummarizerToken)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showSummarizerToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Model Name</Label>
-                <Input
-                  value={localSettings.summarizerModel}
-                  onChange={(e) => updateField("summarizerModel", e.target.value)}
-                  placeholder="gpt-4"
-                  className="bg-secondary/50 border-border"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
 
         <div className="flex justify-end gap-3">
           <Button variant="ghost" onClick={() => setOpen(false)}>
@@ -159,9 +202,14 @@ export function SettingsDialog({ settings, onSave }: SettingsDialogProps) {
           </Button>
           <Button
             onClick={handleSave}
+            disabled={saving || loading}
             className="bg-gradient-primary text-primary-foreground hover:opacity-90"
           >
-            <Check className="w-4 h-4 mr-2" />
+            {saving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Check className="w-4 h-4 mr-2" />
+            )}
             Save Settings
           </Button>
         </div>
