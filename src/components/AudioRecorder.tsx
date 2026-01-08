@@ -1,41 +1,12 @@
 import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Mic, Square, Upload, FileAudio, Loader2, Globe } from "lucide-react";
+import { Mic, Square, Upload, FileAudio, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
-const EUROPEAN_LANGUAGES = [
-  { code: "", label: "Auto-detect" },
-  { code: "en", label: "English" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "es", label: "Spanish" },
-  { code: "it", label: "Italian" },
-  { code: "pt", label: "Portuguese" },
-  { code: "nl", label: "Dutch" },
-  { code: "pl", label: "Polish" },
-  { code: "ru", label: "Russian" },
-  { code: "uk", label: "Ukrainian" },
-  { code: "sv", label: "Swedish" },
-  { code: "da", label: "Danish" },
-  { code: "no", label: "Norwegian" },
-  { code: "fi", label: "Finnish" },
-  { code: "el", label: "Greek" },
-  { code: "cs", label: "Czech" },
-  { code: "ro", label: "Romanian" },
-  { code: "hu", label: "Hungarian" },
-];
 
 interface AudioRecorderProps {
   onFileSelect: (file: File) => void;
-  onTranscribe: (language: string) => void;
+  onTranscribe: () => void;
   hasFile: boolean;
   isProcessing?: boolean;
 }
@@ -44,7 +15,6 @@ export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessin
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [selectedLanguage, setSelectedLanguage] = useState("");
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -207,23 +177,6 @@ export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessin
         )}
       </div>
 
-      {/* Language Selector */}
-      <div className="flex items-center gap-3">
-        <Globe className="w-5 h-5 text-muted-foreground" />
-        <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-          <SelectTrigger className="flex-1 bg-background border-border">
-            <SelectValue placeholder="Select language" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border-border z-50">
-            {EUROPEAN_LANGUAGES.map((lang) => (
-              <SelectItem key={lang.code} value={lang.code || "auto"}>
-                {lang.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Transcribe Button */}
       {hasFile && (
         <motion.div
@@ -231,7 +184,7 @@ export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessin
           animate={{ opacity: 1, y: 0 }}
         >
           <Button
-            onClick={() => onTranscribe(selectedLanguage === "auto" ? "" : selectedLanguage)}
+            onClick={onTranscribe}
             disabled={isProcessing}
             className="w-full bg-gradient-primary text-primary-foreground font-semibold shadow-glow hover:opacity-90 transition-opacity"
           >

@@ -154,7 +154,7 @@ def split_wav_to_chunks(wav_path: str, chunk_length: float = DEFAULT_CHUNK_SEC, 
     return chunk_paths
 
 
-def transcribe_chunk(chunk_path: str, url: str, token: str, model: str, language: str = None):
+def transcribe_chunk(chunk_path: str, url: str, token: str, model: str):
     """Transcribe a single audio chunk"""
     headers = {}
     if token:
@@ -162,13 +162,9 @@ def transcribe_chunk(chunk_path: str, url: str, token: str, model: str, language
     
     with open(chunk_path, "rb") as f:
         files = {"file": (os.path.basename(chunk_path), f, "audio/wav")}
-        data = {
-            "task": "transcribe"  # Keep original language, don't translate to English
-        }
+        data = {}
         if model:
             data["model"] = model
-        if language:
-            data["language"] = language
         
         resp = requests.post(url, headers=headers, files=files, data=data, timeout=120, verify=False)
     
@@ -228,30 +224,11 @@ async def transcribe(
     if not settings["whisper_url"]:
         raise HTTPException(status_code=400, detail="Transcription endpoint not configured")
     
-    # Get file extension, default to .webm for recordings without extension
-    filename = file.filename or "audio.webm"
-    ext = os.path.splitext(filename)[1]
-    if not ext:
-        # Detect from content type
-        content_type = file.content_type or ""
-        if "webm" in content_type:
-            ext = ".webm"
-        elif "mp4" in content_type or "video" in content_type:
-            ext = ".mp4"
-        elif "wav" in content_type:
-            ext = ".wav"
-        elif "mp3" in content_type or "mpeg" in content_type:
-            ext = ".mp3"
-        else:
-            ext = ".webm"  # Default for browser recordings
-    
     # Save uploaded file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = tmp.name
-    
-    print(f"[DEBUG] Saved file: {tmp_path}, size: {len(content)} bytes, content_type: {file.content_type}")
     
     try:
         # Convert to WAV
@@ -271,8 +248,7 @@ async def transcribe(
                         chunk_path,
                         settings["whisper_url"],
                         settings["whisper_token"],
-                        settings["whisper_model"],
-                        language
+                        settings["whisper_model"]
                     )
                     ts = str(timedelta(seconds=int(start)))
                     results.append(f"[{ts}] {text.strip()}")
@@ -289,8 +265,7 @@ async def transcribe(
                 wav_path,
                 settings["whisper_url"],
                 settings["whisper_token"],
-                settings["whisper_model"],
-                language
+                settings["whisper_model"]
             )
         
         return {"transcript": transcript, "duration": duration}
