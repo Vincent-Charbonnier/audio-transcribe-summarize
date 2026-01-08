@@ -74,10 +74,13 @@ const Index = () => {
       return;
     }
 
+    // Debug: log current settings
+    console.log("Current settings:", settings);
+
     if (!settings.whisperUrl) {
       toast({
         title: "Configuration required",
-        description: "Please configure your transcription API endpoint in settings.",
+        description: "Please configure your transcription API endpoint in settings (click the gear icon).",
         variant: "destructive",
       });
       return;
