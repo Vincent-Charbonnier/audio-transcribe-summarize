@@ -1,0 +1,17 @@
+{{- if .Values.ezua.enabled }}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: scribe-frontend
+spec:
+  hosts:
+    - {{ .Values.ezua.virtualService.host }}
+  gateways:
+    - {{ .Values.ezua.virtualService.istioGateway }}
+  http:
+    - route:
+        - destination:
+            host: scribe-frontend
+            port:
+              number: 80
+{{- end }}

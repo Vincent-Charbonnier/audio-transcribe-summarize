@@ -16,6 +16,12 @@ service:
 env:
   VITE_API_URL: "http://scribe-backend:8000"
 
+ezua:
+  enabled: true
+  virtualService:
+    host: "scribe.${DOMAIN_NAME}"
+    istioGateway: "istio-system/ezaf-gateway"
+
 resources:
   limits: {}
   requests: {}
