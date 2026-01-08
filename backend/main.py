@@ -224,11 +224,30 @@ async def transcribe(
     if not settings["whisper_url"]:
         raise HTTPException(status_code=400, detail="Transcription endpoint not configured")
     
+    # Get file extension, default to .webm for recordings without extension
+    filename = file.filename or "audio.webm"
+    ext = os.path.splitext(filename)[1]
+    if not ext:
+        # Detect from content type
+        content_type = file.content_type or ""
+        if "webm" in content_type:
+            ext = ".webm"
+        elif "mp4" in content_type or "video" in content_type:
+            ext = ".mp4"
+        elif "wav" in content_type:
+            ext = ".wav"
+        elif "mp3" in content_type or "mpeg" in content_type:
+            ext = ".mp3"
+        else:
+            ext = ".webm"  # Default for browser recordings
+    
     # Save uploaded file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = tmp.name
+    
+    print(f"[DEBUG] Saved file: {tmp_path}, size: {len(content)} bytes, content_type: {file.content_type}")
     
     try:
         # Convert to WAV
