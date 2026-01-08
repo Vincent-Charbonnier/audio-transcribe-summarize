@@ -17,7 +17,7 @@ service:
   port: 80
 
 env:
-  VITE_API_URL: "http://scribe-backend:8000"
+  VITE_API_URL: ""  # Empty = relative URLs, nginx proxies /api to backend
 
 readinessProbe:
   path: "/"
