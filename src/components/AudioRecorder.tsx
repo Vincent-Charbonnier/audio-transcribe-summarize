@@ -1,15 +1,17 @@
 import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Mic, Square, Upload, FileAudio } from "lucide-react";
+import { Mic, Square, Upload, FileAudio, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface AudioRecorderProps {
-  onAudioReady: (file: File) => void;
+  onFileSelect: (file: File) => void;
+  onTranscribe: () => void;
+  hasFile: boolean;
   isProcessing?: boolean;
 }
 
-export function AudioRecorder({ onAudioReady, isProcessing }: AudioRecorderProps) {
+export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessing }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -42,7 +44,7 @@ export function AudioRecorder({ onAudioReady, isProcessing }: AudioRecorderProps
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         const file = new File([blob], `recording-${Date.now()}.webm`, { type: "audio/webm" });
         setUploadedFile(file);
-        onAudioReady(file);
+        onFileSelect(file);
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -56,7 +58,7 @@ export function AudioRecorder({ onAudioReady, isProcessing }: AudioRecorderProps
     } catch (error) {
       console.error("Failed to start recording:", error);
     }
-  }, [onAudioReady]);
+  }, [onFileSelect]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
@@ -73,7 +75,7 @@ export function AudioRecorder({ onAudioReady, isProcessing }: AudioRecorderProps
     const file = e.target.files?.[0];
     if (file) {
       setUploadedFile(file);
-      onAudioReady(file);
+      onFileSelect(file);
     }
   };
 
@@ -174,6 +176,29 @@ export function AudioRecorder({ onAudioReady, isProcessing }: AudioRecorderProps
           </>
         )}
       </div>
+
+      {/* Transcribe Button */}
+      {hasFile && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Button
+            onClick={onTranscribe}
+            disabled={isProcessing}
+            className="w-full bg-gradient-primary text-primary-foreground font-semibold shadow-glow hover:opacity-90 transition-opacity"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Transcribing...
+              </>
+            ) : (
+              "Transcribe Audio"
+            )}
+          </Button>
+        </motion.div>
+      )}
     </div>
   );
 }
