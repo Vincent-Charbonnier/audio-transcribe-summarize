@@ -2,11 +2,28 @@ import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Mic, Square, Upload, FileAudio, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+
+const LANGUAGES = [
+  { code: "", label: "Auto-detect" },
+  { code: "en", label: "English" },
+  { code: "de", label: "German" },
+  { code: "fr", label: "French" },
+  { code: "es", label: "Spanish" },
+  { code: "it", label: "Italian" },
+  { code: "nl", label: "Dutch" },
+  { code: "pt", label: "Portuguese" },
+  { code: "pl", label: "Polish" },
+  { code: "sv", label: "Swedish" },
+  { code: "da", label: "Danish" },
+  { code: "no", label: "Norwegian" },
+  { code: "fi", label: "Finnish" },
+];
 
 interface AudioRecorderProps {
   onFileSelect: (file: File) => void;
-  onTranscribe: () => void;
+  onTranscribe: (language: string) => void;
   hasFile: boolean;
   isProcessing?: boolean;
 }
@@ -15,6 +32,7 @@ export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessin
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [language, setLanguage] = useState("");
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -177,14 +195,30 @@ export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessin
         )}
       </div>
 
-      {/* Transcribe Button */}
+      {/* Language Selection & Transcribe Button */}
       {hasFile && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
+          className="space-y-3"
         >
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-muted-foreground whitespace-nowrap">Language:</label>
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Auto-detect" />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map((lang) => (
+                  <SelectItem key={lang.code} value={lang.code || "auto"}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Button
-            onClick={onTranscribe}
+            onClick={() => onTranscribe(language === "auto" ? "" : language)}
             disabled={isProcessing}
             className="w-full bg-gradient-primary text-primary-foreground font-semibold shadow-glow hover:opacity-90 transition-opacity"
           >
