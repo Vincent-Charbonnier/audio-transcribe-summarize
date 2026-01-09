@@ -5,16 +5,47 @@ metadata:
   labels:
     {{- include "scribe.labels" . | nindent 4 }}
 spec:
-  gateways:
-    - {{ .Values.ezua.virtualService.istioGateway }}
   hosts:
     - {{ .Values.ezua.virtualService.endpoint }}
+  gateways:
+    - {{ .Values.ezua.virtualService.istioGateway }}
   http:
+    # API + CORS FIRST
+    - match:
+        - uri:
+            prefix: /api/
+      corsPolicy:
+        allowOrigins:
+          - regex: ".*"
+        allowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        allowHeaders:
+          - "*"
+        allowCredentials: true
+      route:
+        - destination:
+            host: scribe-backend.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: {{ .Values.backend.port }}
+
+    # API health endpoint
+    - match:
+        - uri:
+            exact: /health
+      route:
+        - destination:
+            host: scribe-backend.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: {{ .Values.backend.port }}
+
+    # FRONTEND fallback (SPA)
     - match:
         - uri:
             prefix: /
-      rewrite:
-        uri: /
       route:
         - destination:
             host: {{ include "scribe.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
