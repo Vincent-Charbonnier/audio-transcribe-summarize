@@ -13,8 +13,8 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Build argument for API URL - empty means relative URLs (nginx proxies /api to backend)
-ARG VITE_API_URL=""
+# Build argument for API URL - defaults to Kubernetes service name
+ARG VITE_API_URL="http://scribe-backend:8000"
 ENV VITE_API_URL=$VITE_API_URL
 
 # Build the app
