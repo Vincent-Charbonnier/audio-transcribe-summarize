@@ -20,9 +20,6 @@ spec:
           imagePullPolicy: {{ .Values.frontend.pullPolicy }}
           ports:
             - containerPort: {{ .Values.frontend.port }}
-          env:
-            - name: VITE_API_URL
-              value: {{ .Values.env.VITE_API_URL | quote }}
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbe.path | quote }}
