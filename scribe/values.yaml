@@ -2,13 +2,13 @@ replicaCount: 1
 
 frontend:
   repository: vinchar/transcriber-frontend
-  tag: "0.0.6"
+  tag: "0.0.8"
   pullPolicy: IfNotPresent
   port: 80
 
 backend:
   repository: vinchar/transcriber-backend
-  tag: "0.0.6"
+  tag: "0.0.8"
   pullPolicy: IfNotPresent
   port: 8000
 
