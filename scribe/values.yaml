@@ -2,9 +2,10 @@ replicaCount: 1
 
 frontend:
   repository: vinchar/transcriber-frontend
-  tag: "0.1.0"
+  tag: "0.1.1"
   pullPolicy: IfNotPresent
   port: 80
+  apiUrl: "https://scribe.${DOMAIN_NAME}"
 
 backend:
   repository: vinchar/transcriber-backend
