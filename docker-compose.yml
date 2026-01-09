@@ -5,15 +5,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        VITE_API_URL: http://localhost:8000
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      - scribe-backend
     restart: unless-stopped
 
-  backend:
+  scribe-backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
