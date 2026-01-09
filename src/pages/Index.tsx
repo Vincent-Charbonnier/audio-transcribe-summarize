@@ -52,7 +52,7 @@ const Index = () => {
     if (!audioFile) {
       toast({
         title: "No file selected",
-        description: "Please record or upload an audio/video file first.",
+        description: "Please upload an audio/video file first.",
         variant: "destructive",
       });
       return;
@@ -131,7 +131,7 @@ const Index = () => {
   }, [transcript, prompt, style, length, isConnected, toast]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -166,35 +166,45 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left column - Recording */}
-          <div className="space-y-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-card rounded-2xl border border-border shadow-card p-6"
-            >
-              <h2 className="text-lg font-semibold text-foreground mb-6">Record or Upload</h2>
-              <AudioRecorder 
-                onFileSelect={handleFileSelect} 
-                onTranscribe={handleTranscribe}
-                hasFile={!!audioFile}
-                isProcessing={isTranscribing} 
-              />
-            </motion.div>
+      {/* Main content - 3 panel layout */}
+      <main className="flex-1 container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+          {/* Left panel - Upload */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="lg:col-span-3 bg-card rounded-2xl border border-border shadow-card p-5"
+          >
+            <h2 className="text-lg font-semibold text-foreground mb-4">Upload</h2>
+            <AudioRecorder 
+              onFileSelect={handleFileSelect} 
+              onTranscribe={handleTranscribe}
+              hasFile={!!audioFile}
+              isProcessing={isTranscribing} 
+            />
+          </motion.div>
 
-            {/* Transcript Editor */}
+          {/* Center panel - Transcript */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="lg:col-span-5"
+          >
             <TranscriptEditor
               transcript={transcript}
               onChange={setTranscript}
               isLoading={isTranscribing}
             />
-          </div>
+          </motion.div>
 
-          {/* Right column - Summary */}
-          <div>
+          {/* Right panel - Summary */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="lg:col-span-4"
+          >
             <SummaryPanel
               transcript={transcript}
               summary={summary}
@@ -207,12 +217,12 @@ const Index = () => {
               onLengthChange={setLength}
               onGenerate={handleGenerateSummary}
             />
-          </div>
+          </motion.div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border py-6 mt-12">
+      <footer className="border-t border-border py-4 mt-auto">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>Edit the transcript to fix errors before generating your summary.</p>
           <p className="mt-1 text-xs">Backend: {config.apiUrl}</p>
