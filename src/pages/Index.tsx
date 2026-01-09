@@ -36,7 +36,7 @@ const Index = () => {
     if (!connected) {
       toast({
         title: "Backend not available",
-        description: `Cannot connect to ${config.apiUrl}. Make sure the backend is running.`,
+        description: "Cannot connect to the backend. Make sure it is running.",
         variant: "destructive",
       });
     }
@@ -229,7 +229,6 @@ const Index = () => {
       <footer className="border-t border-border py-4 mt-auto">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>Edit the transcript to fix errors before generating your summary.</p>
-          <p className="mt-1 text-xs">Backend: {config.apiUrl}</p>
         </div>
       </footer>
     </div>
