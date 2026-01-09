@@ -15,14 +15,14 @@ spec:
         app: {{ include "scribe.name" . }}
     spec:
       containers:
-        - name: scribe
+        - name: scribe-frontend
           image: "{{ .Values.frontend.repository }}:{{ .Values.frontend.tag }}"
           imagePullPolicy: {{ .Values.frontend.pullPolicy }}
           ports:
             - containerPort: {{ .Values.frontend.port }}
           readinessProbe:
             httpGet:
-              path: {{ .Values.readinessProbe.path | quote }}
+              path: "/"
               port: {{ .Values.frontend.port }}
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
@@ -31,7 +31,7 @@ spec:
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
           livenessProbe:
             httpGet:
-              path: {{ .Values.livenessProbe.path | quote }}
+              path: "/"
               port: {{ .Values.frontend.port }}
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
