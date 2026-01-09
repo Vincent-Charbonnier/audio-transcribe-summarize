@@ -173,15 +173,19 @@ const Index = () => {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-3 bg-card rounded-2xl border border-border shadow-card p-5"
+            className="lg:col-span-4 bg-card rounded-2xl border border-border shadow-card overflow-hidden"
           >
-            <h2 className="text-lg font-semibold text-foreground mb-4">Upload</h2>
-            <AudioRecorder 
-              onFileSelect={handleFileSelect} 
-              onTranscribe={handleTranscribe}
-              hasFile={!!audioFile}
-              isProcessing={isTranscribing} 
-            />
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+              <h3 className="font-semibold text-foreground">Upload</h3>
+            </div>
+            <div className="p-4">
+              <AudioRecorder 
+                onFileSelect={handleFileSelect} 
+                onTranscribe={handleTranscribe}
+                hasFile={!!audioFile}
+                isProcessing={isTranscribing} 
+              />
+            </div>
           </motion.div>
 
           {/* Center panel - Transcript */}
@@ -189,7 +193,7 @@ const Index = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="lg:col-span-5"
+            className="lg:col-span-4"
           >
             <TranscriptEditor
               transcript={transcript}
