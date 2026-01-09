@@ -13,8 +13,10 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Build argument for API URL - defaults to Kubernetes service name
-ARG VITE_API_URL="http://scribe-backend:8000"
+# Build argument for API URL - set at build time for your environment
+# Local: VITE_API_URL=http://localhost:8000
+# K8s: VITE_API_URL=https://your-domain.com or leave empty if using ingress
+ARG VITE_API_URL=""
 ENV VITE_API_URL=$VITE_API_URL
 
 # Build the app
