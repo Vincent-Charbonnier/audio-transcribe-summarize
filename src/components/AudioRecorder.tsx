@@ -47,8 +47,22 @@ export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessin
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100,
+        }
+      });
+      
+      // Try to use audio/webm with opus codec for better quality
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : 'audio/mp4';
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -59,14 +73,16 @@ export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessin
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const file = new File([blob], `recording-${Date.now()}.webm`, { type: "audio/webm" });
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const file = new File([blob], `recording-${Date.now()}.${extension}`, { type: mimeType });
         setUploadedFile(file);
         onFileSelect(file);
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start();
+      // Start with timeslice to collect data every second for better reliability
+      mediaRecorder.start(1000);
       setIsRecording(true);
       setRecordingTime(0);
       
