@@ -13,13 +13,7 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Build argument for API URL - set at build time for your environment
-# Local: VITE_API_URL=http://localhost:8000
-# K8s: VITE_API_URL=https://your-domain.com or leave empty if using ingress
-ARG VITE_API_URL=""
-ENV VITE_API_URL=$VITE_API_URL
-
-# Build the app
+# Build the app (no VITE_API_URL needed - config is injected at runtime)
 RUN npm run build
 
 # Production stage with nginx
@@ -31,7 +25,11 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copy nginx config for SPA routing
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Copy entrypoint script for runtime config injection
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # Expose port
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]

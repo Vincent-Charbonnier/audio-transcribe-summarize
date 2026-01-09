@@ -1,6 +1,14 @@
-// Runtime configuration - these can be overridden at build time or runtime
+// Runtime configuration - reads from window.__RUNTIME_CONFIG__ (injected at container startup)
+// Falls back to VITE_API_URL for local dev, then empty string for relative URLs
+
+declare global {
+  interface Window {
+    __RUNTIME_CONFIG__?: {
+      API_URL?: string;
+    };
+  }
+}
+
 export const config = {
-  // Backend API base URL - uses relative path for production (nginx proxies /api and /health to backend)
-  // For local development, set VITE_API_URL=http://localhost:8000
-  apiUrl: import.meta.env.VITE_API_URL || '',
+  apiUrl: window.__RUNTIME_CONFIG__?.API_URL || import.meta.env.VITE_API_URL || '',
 };
