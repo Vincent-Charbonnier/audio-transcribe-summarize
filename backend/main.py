@@ -154,7 +154,7 @@ def split_wav_to_chunks(wav_path: str, chunk_length: float = DEFAULT_CHUNK_SEC, 
     return chunk_paths
 
 
-def transcribe_chunk(chunk_path: str, url: str, token: str, model: str):
+def transcribe_chunk(chunk_path: str, url: str, token: str, model: str, language: str = None):
     """Transcribe a single audio chunk"""
     headers = {}
     if token:
@@ -165,6 +165,8 @@ def transcribe_chunk(chunk_path: str, url: str, token: str, model: str):
         data = {}
         if model:
             data["model"] = model
+        if language:
+            data["language"] = language
         
         resp = requests.post(url, headers=headers, files=files, data=data, timeout=120, verify=False)
     
@@ -248,7 +250,8 @@ async def transcribe(
                         chunk_path,
                         settings["whisper_url"],
                         settings["whisper_token"],
-                        settings["whisper_model"]
+                        settings["whisper_model"],
+                        language
                     )
                     ts = str(timedelta(seconds=int(start)))
                     results.append(f"[{ts}] {text.strip()}")
@@ -265,7 +268,8 @@ async def transcribe(
                 wav_path,
                 settings["whisper_url"],
                 settings["whisper_token"],
-                settings["whisper_model"]
+                settings["whisper_model"],
+                language
             )
         
         return {"transcript": transcript, "duration": duration}
