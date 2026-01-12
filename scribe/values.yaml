@@ -5,7 +5,6 @@ frontend:
   tag: "0.1.1"
   pullPolicy: IfNotPresent
   port: 80
-  apiUrl: "https://scribe.${DOMAIN_NAME}"
 
 backend:
   repository: vinchar/transcriber-backend
@@ -16,22 +15,6 @@ backend:
 service:
   type: ClusterIP
   port: 80
-
-readinessProbe:
-  path: "/"
-  initialDelaySeconds: 5
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-  successThreshold: 1
-
-livenessProbe:
-  path: "/"
-  initialDelaySeconds: 20
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-  successThreshold: 1
 
 ezua:
   virtualService:

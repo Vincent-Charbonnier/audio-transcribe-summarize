@@ -13,6 +13,8 @@ spec:
     metadata:
       labels:
         app: scribe-backend
+        app.kubernetes.io/name: scribe-backend
+        app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       containers:
         - name: backend
@@ -20,3 +22,17 @@ spec:
           imagePullPolicy: {{ .Values.backend.pullPolicy }}
           ports:
             - containerPort: {{ .Values.backend.port }}
+          readinessProbe:
+            httpGet:
+              path: "/health"
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: "/health"
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5

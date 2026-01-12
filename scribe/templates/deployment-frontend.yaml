@@ -13,6 +13,8 @@ spec:
     metadata:
       labels:
         app: {{ include "scribe.name" . }}
+        app.kubernetes.io/name: {{ include "scribe.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       containers:
         - name: scribe-frontend
@@ -20,7 +22,11 @@ spec:
           imagePullPolicy: {{ .Values.frontend.pullPolicy }}
           ports:
             - containerPort: {{ .Values.frontend.port }}
-          env:
-            - name: API_URL
-              value: {{ .Values.frontend.apiUrl | quote }}
-          # ... rest of probes
+          readinessProbe:
+            httpGet:
+              path: "/"
+              port: {{ .Values.frontend.port }}
+          livenessProbe:
+            httpGet:
+              path: "/"
+              port: {{ .Values.frontend.port }}
