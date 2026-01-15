@@ -6,7 +6,7 @@ metadata:
     {{- include "scribe.labels" . | nindent 4 }}
 spec:
   hosts:
-    - {{ .Values.ezua.virtualService.endpoint }}
+    - "scribe.{{ .Values.domainName }}"
   gateways:
     - {{ .Values.ezua.virtualService.istioGateway }}
   http:
