@@ -1,7 +1,5 @@
 replicaCount: 1
 
-domainName: "example.com"  # <-- OVERRIDABLE
-
 frontend:
   repository: vinchar/transcriber-frontend
   tag: "0.1.1"
@@ -20,4 +18,6 @@ service:
 
 ezua:
   virtualService:
+    endpoint: "scribe.ai-application.pcai-dev.hpecic.net"
+    domain: "ai-application.pcai-dev.hpecic.net"
     istioGateway: "istio-system/ezaf-gateway"
