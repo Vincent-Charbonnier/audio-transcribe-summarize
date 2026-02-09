@@ -19,6 +19,7 @@ COPY . .
 RUN mkdir -p /app/data
 
 ENV MODEL_CONFIG_PATH=/app/data/model_settings.json
+ENV MAX_UPLOAD_MB=200
 
 EXPOSE 8000
 

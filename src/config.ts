@@ -5,10 +5,12 @@ declare global {
   interface Window {
     __RUNTIME_CONFIG__?: {
       API_URL?: string;
+      MAX_UPLOAD_MB?: string;
     };
   }
 }
 
 export const config = {
   apiUrl: window.__RUNTIME_CONFIG__?.API_URL || import.meta.env.VITE_API_URL || '',
+  maxUploadMb: Number(window.__RUNTIME_CONFIG__?.MAX_UPLOAD_MB || import.meta.env.VITE_MAX_UPLOAD_MB || '') || 200,
 };

@@ -22,7 +22,7 @@ const LANGUAGES = [
 ];
 
 interface AudioRecorderProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect: (file: File) => boolean;
   onTranscribe: (language: string) => void;
   hasFile: boolean;
   isProcessing?: boolean;
@@ -37,8 +37,12 @@ export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessin
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setUploadedFile(file);
-      onFileSelect(file);
+      const accepted = onFileSelect(file);
+      if (accepted) {
+        setUploadedFile(file);
+      } else {
+        setUploadedFile(null);
+      }
     }
   };
 

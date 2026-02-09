@@ -18,6 +18,10 @@ export interface SummarizeResponse {
   summary: string;
 }
 
+export interface CleanTranscriptResponse {
+  transcript: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -87,6 +91,21 @@ class ApiClient {
     if (!response.ok) {
       const error = await response.text();
       throw new Error(error || `Summarization failed: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async cleanTranscript(transcript: string): Promise<CleanTranscriptResponse> {
+    const response = await fetch(`${this.baseUrl}/api/clean_transcript`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || `Cleanup failed: ${response.status}`);
     }
 
     return response.json();

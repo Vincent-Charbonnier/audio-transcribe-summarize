@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Edit3, Copy, Download, Check } from "lucide-react";
+import { Edit3, Copy, Download, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
@@ -8,9 +8,17 @@ interface TranscriptEditorProps {
   transcript: string;
   onChange: (value: string) => void;
   isLoading?: boolean;
+  isCleaning?: boolean;
+  onClean?: () => void;
 }
 
-export function TranscriptEditor({ transcript, onChange, isLoading }: TranscriptEditorProps) {
+export function TranscriptEditor({
+  transcript,
+  onChange,
+  isLoading,
+  isCleaning,
+  onClean,
+}: TranscriptEditorProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -41,6 +49,19 @@ export function TranscriptEditor({ transcript, onChange, isLoading }: Transcript
           <h3 className="font-semibold text-foreground">Transcript</h3>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClean}
+            disabled={!transcript || isCleaning}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {isCleaning ? (
+              <Sparkles className="w-4 h-4 animate-pulse" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+          </Button>
           <Button
             variant="ghost"
             size="sm"

@@ -24,6 +24,9 @@ const Index = () => {
   const [length, setLength] = useState("short");
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
+
+  const MAX_UPLOAD_MB = config.maxUploadMb;
 
   // Check backend connection on mount
   useEffect(() => {
@@ -43,10 +46,20 @@ const Index = () => {
   };
 
   const handleFileSelect = useCallback((file: File) => {
+    const sizeMb = file.size / (1024 * 1024);
+    if (sizeMb > MAX_UPLOAD_MB) {
+      toast({
+        title: "File too large",
+        description: `Max upload size is ${MAX_UPLOAD_MB} MB.`,
+        variant: "destructive",
+      });
+      return false;
+    }
     setAudioFile(file);
     setTranscript("");
     setSummary("");
-  }, []);
+    return true;
+  }, [toast]);
 
   const handleTranscribe = useCallback(async (language: string) => {
     if (!audioFile) {
@@ -130,6 +143,46 @@ const Index = () => {
     }
   }, [transcript, prompt, style, length, isConnected, toast]);
 
+  const handleCleanTranscript = useCallback(async () => {
+    if (!transcript) {
+      toast({
+        title: "No transcript",
+        description: "Please transcribe audio first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isConnected) {
+      toast({
+        title: "Backend not connected",
+        description: "Please make sure the backend server is running.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCleaning(true);
+
+    try {
+      const result = await api.cleanTranscript(transcript);
+      setTranscript(result.transcript);
+      toast({
+        title: "Transcript cleaned",
+        description: "The transcript has been cleaned for readability.",
+      });
+    } catch (error) {
+      console.error("Cleanup error:", error);
+      toast({
+        title: "Cleanup failed",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCleaning(false);
+    }
+  }, [transcript, isConnected, toast]);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -199,6 +252,8 @@ const Index = () => {
               transcript={transcript}
               onChange={setTranscript}
               isLoading={isTranscribing}
+              isCleaning={isCleaning}
+              onClean={handleCleanTranscript}
             />
           </motion.div>
 

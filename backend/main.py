@@ -13,12 +13,15 @@ import asyncio
 import logging
 import sys
 import psutil
+import time
 
 from datetime import timedelta
+from collections import deque
 from typing import Optional
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 # ------------------------------------------------------------------
@@ -53,11 +56,57 @@ app.add_middleware(
 )
 
 # ------------------------------------------------------------------
+# Rate limiting middleware (simple in-memory, per pod)
+# ------------------------------------------------------------------
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    path = request.url.path
+    if not path.startswith("/api/"):
+        return await call_next(request)
+
+    if RATE_LIMIT_RPM <= 0:
+        return await call_next(request)
+
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+
+    async with _rate_lock:
+        bucket = _rate_buckets.get(client_ip)
+        if bucket is None:
+            bucket = deque()
+            _rate_buckets[client_ip] = bucket
+
+        cutoff = now - RATE_LIMIT_WINDOW_SEC
+        while bucket and bucket[0] < cutoff:
+            bucket.popleft()
+
+        if len(bucket) >= RATE_LIMIT_RPM:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded"},
+            )
+
+        bucket.append(now)
+
+    return await call_next(request)
+
+# ------------------------------------------------------------------
 # Global limits
 # ------------------------------------------------------------------
 
-# ONE transcription at a time per pod (prevents OOM storms)
-TRANSCRIBE_SEMAPHORE = asyncio.Semaphore(1)
+# Concurrency controls (per pod)
+TRANSCRIBE_CONCURRENCY = int(os.getenv("TRANSCRIBE_CONCURRENCY", "1"))
+TRANSCRIBE_SEMAPHORE = asyncio.Semaphore(TRANSCRIBE_CONCURRENCY)
+
+# Request size limit (MB)
+MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "200"))
+
+# Simple per-pod rate limiting (requests per minute)
+RATE_LIMIT_RPM = int(os.getenv("RATE_LIMIT_RPM", "120"))
+RATE_LIMIT_WINDOW_SEC = 60
+_rate_lock = asyncio.Lock()
+_rate_buckets: dict[str, deque] = {}
 
 # ------------------------------------------------------------------
 # Configuration
@@ -98,6 +147,9 @@ class SummarizeRequest(BaseModel):
     prompt: Optional[str] = ""
     style: str = "concise"
     length: str = "short"
+
+class CleanTranscriptRequest(BaseModel):
+    transcript: str
 
 # ------------------------------------------------------------------
 # Settings helpers
@@ -226,12 +278,16 @@ def transcribe_chunk(chunk_path: str, url: str, token: str, model: str, language
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
+    data = {"model": model, "task": "transcribe"}
+    if language:
+        data["language"] = language
+
     with open(chunk_path, "rb") as f:
         resp = requests.post(
             url,
             headers=headers,
             files={"file": (os.path.basename(chunk_path), f, "audio/wav")},
-            data={"model": model, "language": language} if language else {"model": model},
+            data=data,
             timeout=120,
             verify=False
         )
@@ -272,11 +328,21 @@ async def update_settings(new: ModelSettings):
 
 @app.post("/api/transcribe")
 async def transcribe(
+    request: Request,
     file: UploadFile = File(...),
     language: Optional[str] = Form(None),
 ):
     if not settings["whisper_url"]:
         raise HTTPException(400, "Whisper endpoint not configured")
+
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            total_bytes = int(content_length)
+            if total_bytes > MAX_UPLOAD_MB * 1024 * 1024:
+                raise HTTPException(413, f"Upload too large (max {MAX_UPLOAD_MB} MB)")
+        except ValueError:
+            pass
 
     async with TRANSCRIBE_SEMAPHORE:
         logger.info(f"New transcription request: {file.filename}")
@@ -343,15 +409,49 @@ async def summarize(req: SummarizeRequest):
 
     logger.info("Summarization request received")
 
+    # Build a safer, format-aware prompt to reduce hallucinations
+    style = (req.style or "concise").strip().lower()
+    length = (req.length or "short").strip().lower()
+
+    length_guidance = {
+        "short": "Keep it short (around 3-6 sentences).",
+        "medium": "Keep it medium length (roughly 8-12 sentences).",
+        "long": "Provide a longer summary (multiple paragraphs if needed).",
+    }.get(length, "Keep it concise.")
+
+    if style == "bullet_points":
+        format_guidance = "Output only a bullet list. Use '-' for each bullet."
+    elif style == "action_items":
+        format_guidance = (
+            "Output only action items as bullets. For each item, include owner if present; "
+            "if owner is not stated, write 'Owner: Not specified'."
+        )
+    elif style == "detailed":
+        format_guidance = "Write a detailed multi-paragraph summary."
+    else:
+        format_guidance = "Write a concise paragraph summary."
+
+    extra_instructions = ""
+    if req.prompt:
+        extra_instructions = f"\nAdditional instructions (if consistent with the transcript): {req.prompt}"
+
+    system_prompt = (
+        "You summarize transcripts. Use only the provided transcript and do not add facts. "
+        "If something is missing or uncertain, say 'Not specified'. "
+        f"{format_guidance} {length_guidance}"
+        f"{extra_instructions}"
+    )
+
     headers = {"Content-Type": "application/json"}
     if settings["summarizer_token"]:
         headers["Authorization"] = f"Bearer {settings['summarizer_token']}"
 
     payload = {
         "messages": [
-            {"role": "system", "content": "Summarize the following transcript."},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": req.transcript},
-        ]
+        ],
+        "temperature": 0.2,
     }
 
     resp = requests.post(
@@ -376,3 +476,52 @@ async def summarize(req: SummarizeRequest):
 
     logger.info("Summarization completed")
     return {"summary": summary}
+
+@app.post("/api/clean_transcript")
+async def clean_transcript(req: CleanTranscriptRequest):
+    if not settings["summarizer_url"]:
+        raise HTTPException(400, "Summarizer endpoint not configured")
+
+    logger.info("Transcript cleanup request received")
+
+    headers = {"Content-Type": "application/json"}
+    if settings["summarizer_token"]:
+        headers["Authorization"] = f"Bearer {settings['summarizer_token']}"
+
+    system_prompt = (
+        "Clean up this transcript for readability. Fix punctuation, casing, and obvious typos. "
+        "Remove filler words and stutters when safe, but do not remove meaning. "
+        "Do not add facts or content that is not present. Do not translate. "
+        "If timestamps like [00:01:23] are present, preserve them."
+    )
+
+    payload = {
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": req.transcript},
+        ],
+        "temperature": 0.2,
+    }
+
+    resp = requests.post(
+        settings["summarizer_url"],
+        headers=headers,
+        json=payload,
+        timeout=120,
+        verify=False,
+    )
+
+    if not resp.ok:
+        logger.error(f"Cleanup error: {resp.text[:300]}")
+        raise HTTPException(resp.status_code, resp.text[:300])
+
+    j = resp.json()
+    cleaned = (
+        j.get("cleaned")
+        or j.get("result")
+        or j.get("text")
+        or j.get("choices", [{}])[0].get("message", {}).get("content", "")
+    )
+
+    logger.info("Transcript cleanup completed")
+    return {"transcript": cleaned}
