@@ -26,7 +26,7 @@ const Index = () => {
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
 
-  const MAX_UPLOAD_MB = config.maxUploadMb;
+  const [maxUploadMb, setMaxUploadMb] = useState<number>(config.maxUploadMb);
 
   // Check backend connection on mount
   useEffect(() => {
@@ -42,15 +42,28 @@ const Index = () => {
         description: "Cannot connect to the backend. Make sure it is running.",
         variant: "destructive",
       });
+      return;
+    }
+    await loadSettings();
+  };
+
+  const loadSettings = async () => {
+    try {
+      const settings = await api.getSettings();
+      if (typeof settings.max_upload_mb === "number" && settings.max_upload_mb > 0) {
+        setMaxUploadMb(settings.max_upload_mb);
+      }
+    } catch (error) {
+      console.error("Failed to load settings:", error);
     }
   };
 
   const handleFileSelect = useCallback((file: File) => {
     const sizeMb = file.size / (1024 * 1024);
-    if (sizeMb > MAX_UPLOAD_MB) {
+    if (sizeMb > maxUploadMb) {
       toast({
         title: "File too large",
-        description: `Max upload size is ${MAX_UPLOAD_MB} MB.`,
+        description: `Max upload size is ${maxUploadMb} MB.`,
         variant: "destructive",
       });
       return false;
@@ -59,7 +72,7 @@ const Index = () => {
     setTranscript("");
     setSummary("");
     return true;
-  }, [toast]);
+  }, [toast, maxUploadMb]);
 
   const handleTranscribe = useCallback(async (language: string) => {
     if (!audioFile) {
@@ -214,7 +227,14 @@ const Index = () => {
                 </span>
               )}
             </div>
-            <SettingsDialog onSettingsChange={checkConnection} />
+            <SettingsDialog
+              onSettingsChange={(settings) => {
+                if (settings.max_upload_mb && settings.max_upload_mb > 0) {
+                  setMaxUploadMb(settings.max_upload_mb);
+                }
+                checkConnection();
+              }}
+            />
           </div>
         </div>
       </header>

@@ -127,6 +127,7 @@ settings = {
     "summarizer_url": "",
     "summarizer_token": "",
     "summarizer_model": "",
+    "max_upload_mb": int(os.getenv("MAX_UPLOAD_MB", "200")),
 }
 
 # ------------------------------------------------------------------
@@ -140,6 +141,7 @@ class ModelSettings(BaseModel):
     summarizer_url: str = ""
     summarizer_token: str = ""
     summarizer_model: str = ""
+    max_upload_mb: int = int(os.getenv("MAX_UPLOAD_MB", "200"))
 
 
 class SummarizeRequest(BaseModel):
@@ -167,6 +169,7 @@ def load_settings():
                 "summarizer_url": data.get("SUMMARIZER_API_URL", ""),
                 "summarizer_token": data.get("SUMMARIZER_API_TOKEN", ""),
                 "summarizer_model": data.get("SUMMARIZER_MODEL_NAME", ""),
+                "max_upload_mb": int(data.get("MAX_UPLOAD_MB", settings["max_upload_mb"])),
             })
     else:
         logger.warning("No model settings file found (using defaults)")
@@ -181,6 +184,7 @@ def save_settings():
             "SUMMARIZER_API_URL": settings["summarizer_url"],
             "SUMMARIZER_API_TOKEN": settings["summarizer_token"],
             "SUMMARIZER_MODEL_NAME": settings["summarizer_model"],
+            "MAX_UPLOAD_MB": settings["max_upload_mb"],
         }, f, indent=2)
 
 load_settings()
@@ -317,6 +321,7 @@ async def get_settings():
         "summarizer_url": settings["summarizer_url"],
         "summarizer_token": "***" if settings["summarizer_token"] else "",
         "summarizer_model": settings["summarizer_model"],
+        "max_upload_mb": settings["max_upload_mb"],
     }
 
 @app.post("/api/settings")
@@ -335,12 +340,13 @@ async def transcribe(
     if not settings["whisper_url"]:
         raise HTTPException(400, "Whisper endpoint not configured")
 
+    max_upload_mb = settings.get("max_upload_mb", MAX_UPLOAD_MB)
     content_length = request.headers.get("content-length")
     if content_length:
         try:
             total_bytes = int(content_length)
-            if total_bytes > MAX_UPLOAD_MB * 1024 * 1024:
-                raise HTTPException(413, f"Upload too large (max {MAX_UPLOAD_MB} MB)")
+            if total_bytes > max_upload_mb * 1024 * 1024:
+                raise HTTPException(413, f"Upload too large (max {max_upload_mb} MB)")
         except ValueError:
             pass
 

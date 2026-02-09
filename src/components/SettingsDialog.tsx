@@ -16,7 +16,7 @@ import { api, ModelSettings } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface SettingsDialogProps {
-  onSettingsChange?: () => void;
+  onSettingsChange?: (settings: ModelSettings) => void;
 }
 
 export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
@@ -31,6 +31,7 @@ export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
     summarizer_url: "",
     summarizer_token: "",
     summarizer_model: "",
+    max_upload_mb: 200,
   });
   const [showWhisperToken, setShowWhisperToken] = useState(false);
   const [showSummarizerToken, setShowSummarizerToken] = useState(false);
@@ -66,7 +67,7 @@ export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
         title: "Settings saved",
         description: "Your model configuration has been updated.",
       });
-      onSettingsChange?.();
+      onSettingsChange?.(localSettings);
       setOpen(false);
     } catch (error) {
       toast({
@@ -79,7 +80,7 @@ export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
     }
   };
 
-  const updateField = (field: keyof ModelSettings, value: string) => {
+  const updateField = (field: keyof ModelSettings, value: string | number) => {
     setLocalSettings((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -142,6 +143,17 @@ export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
                     value={localSettings.whisper_model}
                     onChange={(e) => updateField("whisper_model", e.target.value)}
                     placeholder="whisper-large-v3"
+                    className="bg-secondary/50 border-border"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Max Upload Size (MB)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={localSettings.max_upload_mb}
+                    onChange={(e) => updateField("max_upload_mb", Number(e.target.value) || 0)}
+                    placeholder="200"
                     className="bg-secondary/50 border-border"
                   />
                 </div>
