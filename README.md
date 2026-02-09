@@ -1,4 +1,4 @@
-# Scribe – Transcribe & Summarize Meetings
+# Scribe - Transcribe & Summarize Meetings
 
 Scribe is a lightweight web UI that uses AI to transcribe audio/video files and generate meeting summaries.  
 It is designed for seamless deployment inside HPE Private Cloud AI environments using Helm charts, but can also be run in a standard Docker environment.
@@ -55,12 +55,16 @@ All configuration is stored persistently within:
 
 Although Helm deployment is the primary use case, the application can also be run locally with Docker.
 
-### Basic run
+### Basic run (manual containers)
 
 ```
 docker run -d --name scribe-frontend -p 3000:80 --restart unless-stopped vinchar/transcriber-frontend:0.0.2
 docker run -d --name scribe-backend -p 8000:8000 -v ${PWD}/data:/app/data -e MODEL_CONFIG_PATH=/app/data/model_settings.json --restart unless-stopped vinchar/transcriber-backend:0.0.2
 ```
+
+### Note on docker-compose
+
+`docker-compose.yml` is no longer used as the primary run method and may be removed or kept only for reference.
 
 ---
 
@@ -100,13 +104,15 @@ The "Clear All Model Settings" button performs the following:
 
 | File/Folder              | Description                                                                 |
 |--------------------------|-----------------------------------------------------------------------------|
-| Dockerfile               | Used to package the UI into a runnable Docker image                         |
-| app.py                   | Main Python/Gradio application                                              |
-| requirements.txt         | Python dependencies                                                         |
-| icon.png                 | Icon used in AI Essentials when deploying via Helm                          |
-| logo.png                 | Logo embedded into the Gradio UI                                            |
-| helmchart/               | Unpacked Helm chart                                                         |
-| scribe.x.x.x.tgz         | Packaged Helm chart used for deployment in HPE Private Cloud AI             |
+| Dockerfile               | Frontend build + nginx runtime image                                        |
+| backend/                 | FastAPI backend service (transcribe/summarize)                              |
+| backend/main.py          | Main FastAPI application                                                    |
+| backend/requirements.txt | Python dependencies                                                         |
+| scribe/                  | Helm chart (templates, values, chart metadata)                              |
+| scribe-*.tgz             | Packaged Helm chart used for deployment in HPE Private Cloud AI             |
+| src/                     | React frontend source                                                       |
+| public/                  | Frontend public assets                                                      |
+| data/                    | Persisted model settings (mounted at `/app/data`)                           |
 
 ---
 
@@ -131,6 +137,11 @@ Use the "Test Transcription Connection" button in the Model Config tab.
 ### Summarizer API not reachable
 
 Use the "Test Summarizer Connection" button.
+
+### Diarization
+
+Diarization support is scaffolded in the frontend but not yet active in the backend.  
+It will require a GPU-backed transcription model to enable reliably.
 
 ---
 
