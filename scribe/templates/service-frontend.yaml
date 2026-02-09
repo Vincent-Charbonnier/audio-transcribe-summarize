@@ -6,9 +6,8 @@ metadata:
     {{- include "scribe.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
+  selector:
+    app: {{ include "scribe.name" . }}
   ports:
     - port: {{ .Values.service.port }}
       targetPort: {{ .Values.frontend.port }}
-      name: http
-  selector:
-    app: {{ include "scribe.name" . }}

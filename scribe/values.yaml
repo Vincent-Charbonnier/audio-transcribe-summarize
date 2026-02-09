@@ -1,16 +1,39 @@
-replicaCount: 1
-
 frontend:
+  replicaCount: 1
   repository: vinchar/transcriber-frontend
   tag: "0.1.1"
   pullPolicy: IfNotPresent
   port: 80
 
 backend:
+  replicaCount: 1
   repository: vinchar/transcriber-backend
-  tag: "0.1.0"
+  tag: "0.1.5"
   pullPolicy: IfNotPresent
   port: 8000
+
+  resources:
+    requests:
+      cpu: 2
+      memory: 8Gi
+    limits:
+      cpu: 4
+      memory: 32Gi
+
+  modelSettings:
+    enabled: true
+
+    # If set, Helm will reuse this PVC and NOT create one
+    existingClaim: ""   # e.g. scribe-model-settings-pvc
+
+    # Used only when existingClaim is empty
+    create: true
+    pvcName: scribe-model-settings-pvc
+    storageSize: 1Gi
+    accessModes:
+      - ReadWriteOnce
+
+    mountPath: /app/data
 
 service:
   type: ClusterIP
@@ -18,6 +41,6 @@ service:
 
 ezua:
   virtualService:
-    endpoint: "scribe.ai-application.pcai-dev.hpecic.net"
-    domain: "ai-application.pcai-dev.hpecic.net"
+    endpoint: "scribe.${DOMAIN_NAME}"
+    domain: "${DOMAIN_NAME}"
     istioGateway: "istio-system/ezaf-gateway"

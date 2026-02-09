@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "scribe.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.frontend.replicaCount }}
   selector:
     matchLabels:
       app: {{ include "scribe.name" . }}
@@ -13,20 +13,11 @@ spec:
     metadata:
       labels:
         app: {{ include "scribe.name" . }}
-        app.kubernetes.io/name: {{ include "scribe.name" . }}
-        app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- include "scribe.labels" . | nindent 8 }}
     spec:
       containers:
-        - name: scribe-frontend
+        - name: frontend
           image: "{{ .Values.frontend.repository }}:{{ .Values.frontend.tag }}"
           imagePullPolicy: {{ .Values.frontend.pullPolicy }}
           ports:
             - containerPort: {{ .Values.frontend.port }}
-          readinessProbe:
-            httpGet:
-              path: "/"
-              port: {{ .Values.frontend.port }}
-          livenessProbe:
-            httpGet:
-              path: "/"
-              port: {{ .Values.frontend.port }}
