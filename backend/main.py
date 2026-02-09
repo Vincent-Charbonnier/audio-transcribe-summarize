@@ -99,9 +99,6 @@ async def rate_limit_middleware(request: Request, call_next):
 TRANSCRIBE_CONCURRENCY = int(os.getenv("TRANSCRIBE_CONCURRENCY", "1"))
 TRANSCRIBE_SEMAPHORE = asyncio.Semaphore(TRANSCRIBE_CONCURRENCY)
 
-# Request size limit (MB)
-MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "200"))
-
 # Simple per-pod rate limiting (requests per minute)
 RATE_LIMIT_RPM = int(os.getenv("RATE_LIMIT_RPM", "120"))
 RATE_LIMIT_WINDOW_SEC = 60
@@ -127,7 +124,9 @@ settings = {
     "summarizer_url": "",
     "summarizer_token": "",
     "summarizer_model": "",
-    "max_upload_mb": int(os.getenv("MAX_UPLOAD_MB", "200")),
+    "diarization_url": "",
+    "diarization_token": "",
+    "diarization_model": "",
 }
 
 # ------------------------------------------------------------------
@@ -141,7 +140,9 @@ class ModelSettings(BaseModel):
     summarizer_url: str = ""
     summarizer_token: str = ""
     summarizer_model: str = ""
-    max_upload_mb: int = int(os.getenv("MAX_UPLOAD_MB", "200"))
+    diarization_url: str = ""
+    diarization_token: str = ""
+    diarization_model: str = ""
 
 
 class SummarizeRequest(BaseModel):
@@ -169,7 +170,9 @@ def load_settings():
                 "summarizer_url": data.get("SUMMARIZER_API_URL", ""),
                 "summarizer_token": data.get("SUMMARIZER_API_TOKEN", ""),
                 "summarizer_model": data.get("SUMMARIZER_MODEL_NAME", ""),
-                "max_upload_mb": int(data.get("MAX_UPLOAD_MB", settings["max_upload_mb"])),
+                "diarization_url": data.get("DIARIZATION_API_URL", ""),
+                "diarization_token": data.get("DIARIZATION_API_TOKEN", ""),
+                "diarization_model": data.get("DIARIZATION_MODEL_NAME", ""),
             })
     else:
         logger.warning("No model settings file found (using defaults)")
@@ -184,7 +187,9 @@ def save_settings():
             "SUMMARIZER_API_URL": settings["summarizer_url"],
             "SUMMARIZER_API_TOKEN": settings["summarizer_token"],
             "SUMMARIZER_MODEL_NAME": settings["summarizer_model"],
-            "MAX_UPLOAD_MB": settings["max_upload_mb"],
+            "DIARIZATION_API_URL": settings["diarization_url"],
+            "DIARIZATION_API_TOKEN": settings["diarization_token"],
+            "DIARIZATION_MODEL_NAME": settings["diarization_model"],
         }, f, indent=2)
 
 load_settings()
@@ -321,7 +326,9 @@ async def get_settings():
         "summarizer_url": settings["summarizer_url"],
         "summarizer_token": "***" if settings["summarizer_token"] else "",
         "summarizer_model": settings["summarizer_model"],
-        "max_upload_mb": settings["max_upload_mb"],
+        "diarization_url": settings["diarization_url"],
+        "diarization_token": "***" if settings["diarization_token"] else "",
+        "diarization_model": settings["diarization_model"],
     }
 
 @app.post("/api/settings")
@@ -336,17 +343,16 @@ async def transcribe(
     request: Request,
     file: UploadFile = File(...),
     language: Optional[str] = Form(None),
+    diarization: Optional[bool] = Form(None),
 ):
     if not settings["whisper_url"]:
         raise HTTPException(400, "Whisper endpoint not configured")
 
-    max_upload_mb = settings.get("max_upload_mb", MAX_UPLOAD_MB)
     content_length = request.headers.get("content-length")
     if content_length:
         try:
             total_bytes = int(content_length)
-            if total_bytes > max_upload_mb * 1024 * 1024:
-                raise HTTPException(413, f"Upload too large (max {max_upload_mb} MB)")
+            _ = total_bytes
         except ValueError:
             pass
 
@@ -393,6 +399,13 @@ async def transcribe(
                     settings["whisper_model"],
                     language,
                 )
+
+            if diarization:
+                if not settings["diarization_url"]:
+                    logger.warning("Diarization requested but not configured; skipping")
+                else:
+                    # TODO: integrate diarization API when available.
+                    logger.info("Diarization requested and configured; not yet implemented")
 
             logger.info("Transcription completed successfully")
             log_mem("end")

@@ -7,7 +7,6 @@ import { SummaryPanel } from "@/components/SummaryPanel";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
-import { config } from "@/config";
 
 const Index = () => {
   const { toast } = useToast();
@@ -26,8 +25,6 @@ const Index = () => {
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
 
-  const [maxUploadMb, setMaxUploadMb] = useState<number>(config.maxUploadMb);
-
   // Check backend connection on mount
   useEffect(() => {
     checkConnection();
@@ -44,35 +41,14 @@ const Index = () => {
       });
       return;
     }
-    await loadSettings();
-  };
-
-  const loadSettings = async () => {
-    try {
-      const settings = await api.getSettings();
-      if (typeof settings.max_upload_mb === "number" && settings.max_upload_mb > 0) {
-        setMaxUploadMb(settings.max_upload_mb);
-      }
-    } catch (error) {
-      console.error("Failed to load settings:", error);
-    }
   };
 
   const handleFileSelect = useCallback((file: File) => {
-    const sizeMb = file.size / (1024 * 1024);
-    if (sizeMb > maxUploadMb) {
-      toast({
-        title: "File too large",
-        description: `Max upload size is ${maxUploadMb} MB.`,
-        variant: "destructive",
-      });
-      return false;
-    }
     setAudioFile(file);
     setTranscript("");
     setSummary("");
     return true;
-  }, [toast, maxUploadMb]);
+  }, []);
 
   const handleTranscribe = useCallback(async (language: string) => {
     if (!audioFile) {
@@ -227,14 +203,7 @@ const Index = () => {
                 </span>
               )}
             </div>
-            <SettingsDialog
-              onSettingsChange={(settings) => {
-                if (settings.max_upload_mb && settings.max_upload_mb > 0) {
-                  setMaxUploadMb(settings.max_upload_mb);
-                }
-                checkConnection();
-              }}
-            />
+            <SettingsDialog onSettingsChange={checkConnection} />
           </div>
         </div>
       </header>

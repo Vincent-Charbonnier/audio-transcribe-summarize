@@ -31,10 +31,13 @@ export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
     summarizer_url: "",
     summarizer_token: "",
     summarizer_model: "",
-    max_upload_mb: 200,
+    diarization_url: "",
+    diarization_token: "",
+    diarization_model: "",
   });
   const [showWhisperToken, setShowWhisperToken] = useState(false);
   const [showSummarizerToken, setShowSummarizerToken] = useState(false);
+  const [showDiarizationToken, setShowDiarizationToken] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -146,17 +149,6 @@ export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
                     className="bg-secondary/50 border-border"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">Max Upload Size (MB)</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={localSettings.max_upload_mb}
-                    onChange={(e) => updateField("max_upload_mb", Number(e.target.value) || 0)}
-                    placeholder="200"
-                    className="bg-secondary/50 border-border"
-                  />
-                </div>
               </div>
             </div>
 
@@ -200,6 +192,52 @@ export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
                     value={localSettings.summarizer_model}
                     onChange={(e) => updateField("summarizer_model", e.target.value)}
                     placeholder="gpt-4"
+                    className="bg-secondary/50 border-border"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator className="bg-border" />
+
+            {/* Diarization Settings */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-foreground">Diarization Model (Optional)</h4>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">API Endpoint URL</Label>
+                  <Input
+                    value={localSettings.diarization_url}
+                    onChange={(e) => updateField("diarization_url", e.target.value)}
+                    placeholder="https://your-diarization-endpoint/v1/diarize"
+                    className="bg-secondary/50 border-border"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">API Token</Label>
+                  <div className="relative">
+                    <Input
+                      type={showDiarizationToken ? "text" : "password"}
+                      value={localSettings.diarization_token}
+                      onChange={(e) => updateField("diarization_token", e.target.value)}
+                      placeholder="Bearer token"
+                      className="bg-secondary/50 border-border pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowDiarizationToken(!showDiarizationToken)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showDiarizationToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Model Name</Label>
+                  <Input
+                    value={localSettings.diarization_model}
+                    onChange={(e) => updateField("diarization_model", e.target.value)}
+                    placeholder="pyannote/speaker-diarization"
                     className="bg-secondary/50 border-border"
                   />
                 </div>

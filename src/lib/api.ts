@@ -7,7 +7,9 @@ export interface ModelSettings {
   summarizer_url: string;
   summarizer_token: string;
   summarizer_model: string;
-  max_upload_mb: number;
+  diarization_url: string;
+  diarization_token: string;
+  diarization_model: string;
 }
 
 export interface TranscribeResponse {
