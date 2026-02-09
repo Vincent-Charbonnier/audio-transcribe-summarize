@@ -1,3 +1,6 @@
+# Deprecated: this file is not used as the primary run method.
+# Prefer Helm deployment or manual container runs.
+
 version: '3.8'
 
 services:
