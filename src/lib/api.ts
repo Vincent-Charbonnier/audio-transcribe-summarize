@@ -92,6 +92,7 @@ class ApiClient {
   async transcribeStream(
     file: File,
     language: string | undefined,
+    diarization: boolean | undefined,
     handlers: {
       onStart?: (data: TranscribeStreamStart) => void;
       onChunk?: (data: TranscribeStreamChunk) => void;
@@ -103,6 +104,9 @@ class ApiClient {
     formData.append("file", file);
     if (language) {
       formData.append("language", language);
+    }
+    if (diarization) {
+      formData.append("diarization", "true");
     }
 
     const response = await fetch(`${this.baseUrl}/api/transcribe/stream`, {

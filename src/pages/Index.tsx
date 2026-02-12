@@ -55,7 +55,7 @@ const Index = () => {
     return true;
   }, []);
 
-  const handleTranscribe = useCallback(async (language: string) => {
+  const handleTranscribe = useCallback(async (language: string, diarization: boolean) => {
     if (!audioFile) {
       toast({
         title: "No file selected",
@@ -82,7 +82,7 @@ const Index = () => {
     let streamError: string | null = null;
 
     try {
-      await api.transcribeStream(audioFile, language || undefined, {
+      await api.transcribeStream(audioFile, language || undefined, diarization, {
         onStart: () => {
           setTranscribeProgress(1);
         },

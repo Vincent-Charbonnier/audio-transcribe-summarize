@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Upload, FileAudio, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +23,7 @@ const LANGUAGES = [
 
 interface AudioRecorderProps {
   onFileSelect: (file: File) => boolean;
-  onTranscribe: (language: string) => void;
+  onTranscribe: (language: string, diarization: boolean) => void;
   hasFile: boolean;
   isProcessing?: boolean;
 }
@@ -30,6 +31,7 @@ interface AudioRecorderProps {
 export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessing }: AudioRecorderProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [language, setLanguage] = useState("en");
+  const [diarization, setDiarization] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,19 +97,29 @@ export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessin
             <label className="text-sm text-muted-foreground whitespace-nowrap">Language:</label>
             <Select value={language} onValueChange={setLanguage}>
               <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Select language" />
-            </SelectTrigger>
-            <SelectContent>
-              {LANGUAGES.map((lang) => (
-                  <SelectItem key={lang.code} value={lang.code}>
-                    {lang.label}
-                  </SelectItem>
-              ))}
-            </SelectContent>
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.label}
+                    </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="diarization"
+              checked={diarization}
+              onCheckedChange={(v) => setDiarization(Boolean(v))}
+            />
+            <label htmlFor="diarization" className="text-sm text-muted-foreground">
+              Diarization (if configured)
+            </label>
+          </div>
           <Button
-            onClick={() => onTranscribe(language)}
+            onClick={() => onTranscribe(language, diarization)}
             disabled={isProcessing}
             className="w-full bg-gradient-primary text-primary-foreground font-semibold shadow-glow hover:opacity-90 transition-opacity"
           >
