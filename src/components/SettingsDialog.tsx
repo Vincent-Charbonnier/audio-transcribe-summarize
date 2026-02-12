@@ -16,7 +16,7 @@ import { api, ModelSettings } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface SettingsDialogProps {
-  onSettingsChange?: (settings: ModelSettings) => void;
+  onSettingsChange?: () => void;
 }
 
 export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
@@ -31,9 +31,12 @@ export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
     summarizer_url: "",
     summarizer_token: "",
     summarizer_model: "",
+<<<<<<< HEAD
     diarization_url: "",
     diarization_token: "",
     diarization_model: "",
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
   });
   const [showWhisperToken, setShowWhisperToken] = useState(false);
   const [showSummarizerToken, setShowSummarizerToken] = useState(false);
@@ -70,7 +73,7 @@ export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
         title: "Settings saved",
         description: "Your model configuration has been updated.",
       });
-      onSettingsChange?.(localSettings);
+      onSettingsChange?.();
       setOpen(false);
     } catch (error) {
       toast({
@@ -83,7 +86,7 @@ export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
     }
   };
 
-  const updateField = (field: keyof ModelSettings, value: string | number) => {
+  const updateField = (field: keyof ModelSettings, value: string) => {
     setLocalSettings((prev) => ({ ...prev, [field]: value }));
   };
 

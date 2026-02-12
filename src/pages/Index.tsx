@@ -26,9 +26,14 @@ const Index = () => {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
+<<<<<<< HEAD
   const [transcribeProgress, setTranscribeProgress] = useState(0);
   const [cleanProgress, setCleanProgress] = useState(0);
   const [summarizeProgress, setSummarizeProgress] = useState(0);
+=======
+
+  const MAX_UPLOAD_MB = config.maxUploadMb;
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 
   // Check backend connection on mount
   useEffect(() => {
@@ -44,16 +49,35 @@ const Index = () => {
         description: "Cannot connect to the backend. Make sure it is running.",
         variant: "destructive",
       });
+<<<<<<< HEAD
       return;
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
     }
   };
 
   const handleFileSelect = useCallback((file: File) => {
+<<<<<<< HEAD
+=======
+    const sizeMb = file.size / (1024 * 1024);
+    if (sizeMb > MAX_UPLOAD_MB) {
+      toast({
+        title: "File too large",
+        description: `Max upload size is ${MAX_UPLOAD_MB} MB.`,
+        variant: "destructive",
+      });
+      return false;
+    }
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
     setAudioFile(file);
     setTranscript("");
     setSummary("");
     return true;
+<<<<<<< HEAD
   }, []);
+=======
+  }, [toast]);
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 
   const handleTranscribe = useCallback(async (language: string, diarization: boolean) => {
     if (!audioFile) {

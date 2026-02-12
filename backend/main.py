@@ -126,9 +126,12 @@ settings = {
     "summarizer_url": "",
     "summarizer_token": "",
     "summarizer_model": "",
+<<<<<<< HEAD
     "diarization_url": "",
     "diarization_token": "",
     "diarization_model": "",
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 }
 
 DIARIZATION_CONCURRENCY = int(os.getenv("DIARIZATION_CONCURRENCY", "2"))
@@ -144,9 +147,12 @@ class ModelSettings(BaseModel):
     summarizer_url: str = ""
     summarizer_token: str = ""
     summarizer_model: str = ""
+<<<<<<< HEAD
     diarization_url: str = ""
     diarization_token: str = ""
     diarization_model: str = ""
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 
 
 class SummarizeRequest(BaseModel):
@@ -175,9 +181,12 @@ def load_settings():
                 "summarizer_url": data.get("SUMMARIZER_API_URL", ""),
                 "summarizer_token": data.get("SUMMARIZER_API_TOKEN", ""),
                 "summarizer_model": data.get("SUMMARIZER_MODEL_NAME", ""),
+<<<<<<< HEAD
                 "diarization_url": data.get("DIARIZATION_API_URL", ""),
                 "diarization_token": data.get("DIARIZATION_API_TOKEN", ""),
                 "diarization_model": data.get("DIARIZATION_MODEL_NAME", ""),
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
             })
     else:
         logger.warning("No model settings file found (using defaults)")
@@ -192,9 +201,12 @@ def save_settings():
             "SUMMARIZER_API_URL": settings["summarizer_url"],
             "SUMMARIZER_API_TOKEN": settings["summarizer_token"],
             "SUMMARIZER_MODEL_NAME": settings["summarizer_model"],
+<<<<<<< HEAD
             "DIARIZATION_API_URL": settings["diarization_url"],
             "DIARIZATION_API_TOKEN": settings["diarization_token"],
             "DIARIZATION_MODEL_NAME": settings["diarization_model"],
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
         }, f, indent=2)
 
 load_settings()
@@ -427,9 +439,12 @@ async def get_settings():
         "summarizer_url": settings["summarizer_url"],
         "summarizer_token": "***" if settings["summarizer_token"] else "",
         "summarizer_model": settings["summarizer_model"],
+<<<<<<< HEAD
         "diarization_url": settings["diarization_url"],
         "diarization_token": "***" if settings["diarization_token"] else "",
         "diarization_model": settings["diarization_model"],
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
     }
 
 @app.post("/api/settings")
@@ -453,7 +468,12 @@ async def transcribe(
     if content_length:
         try:
             total_bytes = int(content_length)
+<<<<<<< HEAD
             _ = total_bytes
+=======
+            if total_bytes > MAX_UPLOAD_MB * 1024 * 1024:
+                raise HTTPException(413, f"Upload too large (max {MAX_UPLOAD_MB} MB)")
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
         except ValueError:
             pass
 
