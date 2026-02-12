@@ -5,6 +5,7 @@ import { AudioRecorder } from "@/components/AudioRecorder";
 import { TranscriptEditor } from "@/components/TranscriptEditor";
 import { SummaryPanel } from "@/components/SummaryPanel";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
@@ -21,9 +22,13 @@ const Index = () => {
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState("concise");
   const [length, setLength] = useState("short");
+  const [transcriptLanguage, setTranscriptLanguage] = useState("en");
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
+  const [transcribeProgress, setTranscribeProgress] = useState(0);
+  const [cleanProgress, setCleanProgress] = useState(0);
+  const [summarizeProgress, setSummarizeProgress] = useState(0);
 
   // Check backend connection on mount
   useEffect(() => {
@@ -70,15 +75,38 @@ const Index = () => {
     }
 
     setIsTranscribing(true);
+    setTranscriptLanguage(language);
+    setTranscribeProgress(0);
+    setTranscript("");
+
+    let streamError: string | null = null;
 
     try {
-      const result = await api.transcribe(audioFile, language || undefined);
-      setTranscript(result.transcript);
-
-      toast({
-        title: "Transcription complete",
-        description: `Transcribed ${result.duration.toFixed(1)}s of audio.`,
+      await api.transcribeStream(audioFile, language || undefined, {
+        onStart: () => {
+          setTranscribeProgress(1);
+        },
+        onChunk: (data) => {
+          setTranscript((prev) => (prev ? `${prev}\n${data.text}` : data.text));
+          const pct = Math.round((data.index / data.total) * 100);
+          setTranscribeProgress(pct);
+        },
+        onComplete: (data) => {
+          setTranscript(data.transcript);
+          setTranscribeProgress(100);
+          toast({
+            title: "Transcription complete",
+            description: `Transcribed ${data.duration.toFixed(1)}s of audio.`,
+          });
+        },
+        onError: (message) => {
+          streamError = message;
+        },
       });
+
+      if (streamError) {
+        throw new Error(streamError);
+      }
     } catch (error) {
       console.error("Transcription error:", error);
       toast({
@@ -111,15 +139,17 @@ const Index = () => {
     }
 
     setIsSummarizing(true);
+    setSummarizeProgress(10);
 
     try {
-      const result = await api.summarize(transcript, prompt, style, length);
+      const result = await api.summarize(transcript, prompt, style, length, transcriptLanguage);
       setSummary(result.summary);
 
       toast({
         title: "Summary generated",
         description: "Your transcript has been summarized successfully.",
       });
+      setSummarizeProgress(100);
     } catch (error) {
       console.error("Summarization error:", error);
       toast({
@@ -127,6 +157,7 @@ const Index = () => {
         description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
+      setSummarizeProgress(0);
     } finally {
       setIsSummarizing(false);
     }
@@ -152,6 +183,7 @@ const Index = () => {
     }
 
     setIsCleaning(true);
+    setCleanProgress(10);
 
     try {
       const result = await api.cleanTranscript(transcript);
@@ -160,6 +192,7 @@ const Index = () => {
         title: "Transcript cleaned",
         description: "The transcript has been cleaned for readability.",
       });
+      setCleanProgress(100);
     } catch (error) {
       console.error("Cleanup error:", error);
       toast({
@@ -167,6 +200,7 @@ const Index = () => {
         description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
+      setCleanProgress(0);
     } finally {
       setIsCleaning(false);
     }
@@ -210,6 +244,33 @@ const Index = () => {
 
       {/* Main content - 3 panel layout */}
       <main className="flex-1 container mx-auto px-4 py-6">
+        {(isTranscribing || isCleaning || isSummarizing) && (
+          <div className="mb-4">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  {isTranscribing ? "Transcription" : isCleaning ? "Cleaning" : "Summarization"}
+                </span>
+                <span>
+                  {isTranscribing
+                    ? `${transcribeProgress}%`
+                    : isCleaning
+                    ? `${cleanProgress}%`
+                    : `${summarizeProgress}%`}
+                </span>
+              </div>
+              <Progress
+                value={
+                  isTranscribing
+                    ? transcribeProgress
+                    : isCleaning
+                    ? cleanProgress
+                    : summarizeProgress
+                }
+              />
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
           {/* Left panel - Upload */}
           <motion.div

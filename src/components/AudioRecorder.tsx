@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 
 const LANGUAGES = [
-  { code: "", label: "Auto-detect" },
   { code: "en", label: "English" },
   { code: "de", label: "German" },
   { code: "fr", label: "French" },
@@ -30,7 +29,7 @@ interface AudioRecorderProps {
 
 export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessing }: AudioRecorderProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [language, setLanguage] = useState("");
+  const [language, setLanguage] = useState("en");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -96,19 +95,19 @@ export function AudioRecorder({ onFileSelect, onTranscribe, hasFile, isProcessin
             <label className="text-sm text-muted-foreground whitespace-nowrap">Language:</label>
             <Select value={language} onValueChange={setLanguage}>
               <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Auto-detect" />
-              </SelectTrigger>
-              <SelectContent>
-                {LANGUAGES.map((lang) => (
-                  <SelectItem key={lang.code} value={lang.code || "auto"}>
+              <SelectValue placeholder="Select language" />
+            </SelectTrigger>
+            <SelectContent>
+              {LANGUAGES.map((lang) => (
+                  <SelectItem key={lang.code} value={lang.code}>
                     {lang.label}
                   </SelectItem>
-                ))}
-              </SelectContent>
+              ))}
+            </SelectContent>
             </Select>
           </div>
           <Button
-            onClick={() => onTranscribe(language === "auto" ? "" : language)}
+            onClick={() => onTranscribe(language)}
             disabled={isProcessing}
             className="w-full bg-gradient-primary text-primary-foreground font-semibold shadow-glow hover:opacity-90 transition-opacity"
           >

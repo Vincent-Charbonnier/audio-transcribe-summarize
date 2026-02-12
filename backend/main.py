@@ -21,7 +21,7 @@ from typing import Optional
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 # ------------------------------------------------------------------
@@ -150,6 +150,7 @@ class SummarizeRequest(BaseModel):
     prompt: Optional[str] = ""
     style: str = "concise"
     length: str = "short"
+    language: Optional[str] = ""
 
 class CleanTranscriptRequest(BaseModel):
     transcript: str
@@ -310,6 +311,13 @@ def transcribe_chunk(chunk_path: str, url: str, token: str, model: str, language
     return j.get("text") or j.get("result") or ""
 
 # ------------------------------------------------------------------
+# SSE helpers
+# ------------------------------------------------------------------
+
+def sse_event(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+# ------------------------------------------------------------------
 # API endpoints
 # ------------------------------------------------------------------
 
@@ -421,6 +429,99 @@ async def transcribe(
                 if p and os.path.exists(p):
                     os.remove(p)
 
+@app.post("/api/transcribe/stream")
+async def transcribe_stream(
+    request: Request,
+    file: UploadFile = File(...),
+    language: Optional[str] = Form(None),
+    diarization: Optional[bool] = Form(None),
+):
+    if not settings["whisper_url"]:
+        raise HTTPException(400, "Whisper endpoint not configured")
+
+    tmp_path = None
+    try:
+        suffix = os.path.splitext(file.filename)[1]
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            shutil.copyfileobj(file.file, tmp)
+            tmp_path = tmp.name
+    except Exception:
+        logger.exception("Failed to read uploaded file for streaming")
+        raise HTTPException(500, "Failed to read uploaded file")
+    finally:
+        try:
+            file.file.close()
+        except Exception:
+            pass
+
+    async def event_gen(tmp_path: str):
+        async with TRANSCRIBE_SEMAPHORE:
+            logger.info(f"New transcription stream: {file.filename}")
+            log_mem("start")
+
+            wav_path = None
+
+            try:
+                wav_path = tmp_path + ".wav"
+                ffmpeg_convert_to_wav(tmp_path, wav_path)
+                duration = get_duration_seconds(wav_path)
+
+                yield sse_event("start", {"duration": duration})
+
+                results = []
+                if duration > MAX_SINGLE_CHUNK_SEC:
+                    chunks = split_wav_to_chunks(wav_path)
+                    total = len(chunks)
+                    for idx, (chunk, start, _) in enumerate(chunks, start=1):
+                        text = transcribe_chunk(
+                            chunk,
+                            settings["whisper_url"],
+                            settings["whisper_token"],
+                            settings["whisper_model"],
+                            language,
+                        )
+                        ts = str(timedelta(seconds=int(start)))
+                        piece = f"[{ts}] {text.strip()}"
+                        results.append(piece)
+                        yield sse_event("chunk", {"index": idx, "total": total, "text": piece})
+                        os.remove(chunk)
+                else:
+                    text = transcribe_chunk(
+                        wav_path,
+                        settings["whisper_url"],
+                        settings["whisper_token"],
+                        settings["whisper_model"],
+                        language,
+                    )
+                    results.append(text)
+                    yield sse_event("chunk", {"index": 1, "total": 1, "text": text})
+
+                if diarization:
+                    if not settings["diarization_url"]:
+                        logger.warning("Diarization requested but not configured; skipping")
+                    else:
+                        logger.info("Diarization requested and configured; not yet implemented")
+
+                transcript = "\n".join(results)
+                yield sse_event("complete", {"transcript": transcript, "duration": duration})
+                logger.info("Transcription stream completed successfully")
+                log_mem("end")
+
+            except Exception as e:
+                logger.exception("Transcription stream failed")
+                yield sse_event("error", {"message": str(e)})
+
+            finally:
+                for p in (tmp_path, wav_path):
+                    if p and os.path.exists(p):
+                        os.remove(p)
+
+    return StreamingResponse(
+        event_gen(tmp_path),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )
+
 @app.post("/api/summarize")
 async def summarize(req: SummarizeRequest):
     if not settings["summarizer_url"]:
@@ -431,6 +532,27 @@ async def summarize(req: SummarizeRequest):
     # Build a safer, format-aware prompt to reduce hallucinations
     style = (req.style or "concise").strip().lower()
     length = (req.length or "short").strip().lower()
+    lang = (req.language or "").strip().lower()
+
+    lang_map = {
+        "en": "English",
+        "fr": "French",
+        "de": "German",
+        "es": "Spanish",
+        "it": "Italian",
+        "nl": "Dutch",
+        "pt": "Portuguese",
+        "pl": "Polish",
+        "sv": "Swedish",
+        "da": "Danish",
+        "no": "Norwegian",
+        "fi": "Finnish",
+    }
+    language_name = lang_map.get(lang, "")
+    if not language_name and lang:
+        language_name = lang
+    if not language_name:
+        language_name = "the same language as the transcript"
 
     length_guidance = {
         "short": "Keep it short (around 3-6 sentences).",
@@ -452,11 +574,16 @@ async def summarize(req: SummarizeRequest):
 
     extra_instructions = ""
     if req.prompt:
-        extra_instructions = f"\nAdditional instructions (if consistent with the transcript): {req.prompt}"
+        extra_instructions = (
+            "\nAdditional user preferences (use to enrich the summary if consistent; "
+            "do not override the required format, length, or language): "
+            f"{req.prompt}"
+        )
 
     system_prompt = (
         "You summarize transcripts. Use only the provided transcript and do not add facts. "
         "If something is missing or uncertain, say 'Not specified'. "
+        f"Write the summary in {language_name}. "
         f"{format_guidance} {length_guidance}"
         f"{extra_instructions}"
     )
@@ -522,25 +649,53 @@ async def clean_transcript(req: CleanTranscriptRequest):
         "temperature": 0.2,
     }
 
-    resp = requests.post(
-        settings["summarizer_url"],
-        headers=headers,
-        json=payload,
-        timeout=120,
-        verify=False,
-    )
+    cleanup_timeout = float(os.getenv("CLEANUP_TIMEOUT_SEC", "180"))
+    cleanup_retries = int(os.getenv("CLEANUP_RETRIES", "2"))
+    cleanup_backoff = float(os.getenv("CLEANUP_RETRY_BACKOFF_SEC", "1.5"))
 
-    if not resp.ok:
-        logger.error(f"Cleanup error: {resp.text[:300]}")
-        raise HTTPException(resp.status_code, resp.text[:300])
+    last_error: str | None = None
+    for attempt in range(1, cleanup_retries + 2):
+        try:
+            resp = requests.post(
+                settings["summarizer_url"],
+                headers=headers,
+                json=payload,
+                timeout=cleanup_timeout,
+                verify=False,
+            )
+        except Exception as e:
+            last_error = f"request_error: {type(e).__name__}: {e}"
+            logger.warning(f"Cleanup request failed (attempt {attempt}): {last_error}")
+            if attempt <= cleanup_retries:
+                time.sleep(cleanup_backoff * attempt)
+                continue
+            raise HTTPException(502, f"Cleanup request failed: {last_error}")
 
-    j = resp.json()
-    cleaned = (
-        j.get("cleaned")
-        or j.get("result")
-        or j.get("text")
-        or j.get("choices", [{}])[0].get("message", {}).get("content", "")
-    )
+        if not resp.ok:
+            last_error = f"upstream_status={resp.status_code}, body={resp.text[:300]}"
+            logger.warning(f"Cleanup upstream error (attempt {attempt}): {last_error}")
+            if attempt <= cleanup_retries:
+                time.sleep(cleanup_backoff * attempt)
+                continue
+            raise HTTPException(resp.status_code, f"Cleanup failed: {last_error}")
 
-    logger.info("Transcript cleanup completed")
-    return {"transcript": cleaned}
+        j = resp.json()
+        cleaned = (
+            j.get("cleaned")
+            or j.get("result")
+            or j.get("text")
+            or j.get("choices", [{}])[0].get("message", {}).get("content", "")
+        )
+
+        if not cleaned:
+            last_error = "empty_response_from_cleanup_model"
+            logger.warning(f"Cleanup returned empty text (attempt {attempt})")
+            if attempt <= cleanup_retries:
+                time.sleep(cleanup_backoff * attempt)
+                continue
+            raise HTTPException(502, "Cleanup failed: empty response")
+
+        logger.info("Transcript cleanup completed")
+        return {"transcript": cleaned}
+
+    raise HTTPException(502, f"Cleanup failed: {last_error or 'unknown_error'}")
