@@ -33,6 +33,9 @@ const Index = () => {
 =======
 
   const MAX_UPLOAD_MB = config.maxUploadMb;
+<<<<<<< HEAD
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
+=======
 >>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 
   // Check backend connection on mount
@@ -50,7 +53,10 @@ const Index = () => {
         variant: "destructive",
       });
 <<<<<<< HEAD
+<<<<<<< HEAD
       return;
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 =======
 >>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
     }
@@ -74,7 +80,11 @@ const Index = () => {
     setSummary("");
     return true;
 <<<<<<< HEAD
+<<<<<<< HEAD
   }, []);
+=======
+  }, [toast]);
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 =======
   }, [toast]);
 >>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)

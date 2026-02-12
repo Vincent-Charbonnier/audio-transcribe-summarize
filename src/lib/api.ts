@@ -8,9 +8,12 @@ export interface ModelSettings {
   summarizer_token: string;
   summarizer_model: string;
 <<<<<<< HEAD
+<<<<<<< HEAD
   diarization_url: string;
   diarization_token: string;
   diarization_model: string;
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 =======
 >>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 }

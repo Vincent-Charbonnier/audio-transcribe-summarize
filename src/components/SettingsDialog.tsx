@@ -32,9 +32,12 @@ export function SettingsDialog({ onSettingsChange }: SettingsDialogProps) {
     summarizer_token: "",
     summarizer_model: "",
 <<<<<<< HEAD
+<<<<<<< HEAD
     diarization_url: "",
     diarization_token: "",
     diarization_model: "",
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 =======
 >>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
   });

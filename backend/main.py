@@ -127,9 +127,12 @@ settings = {
     "summarizer_token": "",
     "summarizer_model": "",
 <<<<<<< HEAD
+<<<<<<< HEAD
     "diarization_url": "",
     "diarization_token": "",
     "diarization_model": "",
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 =======
 >>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 }
@@ -148,9 +151,12 @@ class ModelSettings(BaseModel):
     summarizer_token: str = ""
     summarizer_model: str = ""
 <<<<<<< HEAD
+<<<<<<< HEAD
     diarization_url: str = ""
     diarization_token: str = ""
     diarization_model: str = ""
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 =======
 >>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 
@@ -182,9 +188,12 @@ def load_settings():
                 "summarizer_token": data.get("SUMMARIZER_API_TOKEN", ""),
                 "summarizer_model": data.get("SUMMARIZER_MODEL_NAME", ""),
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "diarization_url": data.get("DIARIZATION_API_URL", ""),
                 "diarization_token": data.get("DIARIZATION_API_TOKEN", ""),
                 "diarization_model": data.get("DIARIZATION_MODEL_NAME", ""),
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 =======
 >>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
             })
@@ -202,9 +211,12 @@ def save_settings():
             "SUMMARIZER_API_TOKEN": settings["summarizer_token"],
             "SUMMARIZER_MODEL_NAME": settings["summarizer_model"],
 <<<<<<< HEAD
+<<<<<<< HEAD
             "DIARIZATION_API_URL": settings["diarization_url"],
             "DIARIZATION_API_TOKEN": settings["diarization_token"],
             "DIARIZATION_MODEL_NAME": settings["diarization_model"],
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 =======
 >>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
         }, f, indent=2)
@@ -440,9 +452,12 @@ async def get_settings():
         "summarizer_token": "***" if settings["summarizer_token"] else "",
         "summarizer_model": settings["summarizer_model"],
 <<<<<<< HEAD
+<<<<<<< HEAD
         "diarization_url": settings["diarization_url"],
         "diarization_token": "***" if settings["diarization_token"] else "",
         "diarization_model": settings["diarization_model"],
+=======
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 =======
 >>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
     }
@@ -469,7 +484,12 @@ async def transcribe(
         try:
             total_bytes = int(content_length)
 <<<<<<< HEAD
+<<<<<<< HEAD
             _ = total_bytes
+=======
+            if total_bytes > MAX_UPLOAD_MB * 1024 * 1024:
+                raise HTTPException(413, f"Upload too large (max {MAX_UPLOAD_MB} MB)")
+>>>>>>> parent of 9f84494 (Fixed transcription with prompt and AI cleaning)
 =======
             if total_bytes > MAX_UPLOAD_MB * 1024 * 1024:
                 raise HTTPException(413, f"Upload too large (max {MAX_UPLOAD_MB} MB)")
