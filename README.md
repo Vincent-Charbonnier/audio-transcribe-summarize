@@ -155,4 +155,4 @@ This project uses:
 - GPT-OSS/OpenAI-compatible APIs for summarization
 
 And Specials thanks to:
-- Dave (for the UI) & Dominic (for the troubleshooting) and all the HPE Private Cloud AI Central Europe SE Team (for being awesome).
+- Dave (for the original gradio app) & Dominic (for the troubleshooting) and all the HPE Private Cloud AI Central Europe SE Team (for being awesome).
